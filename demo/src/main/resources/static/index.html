@@ -2,64 +2,102 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>Chat Room</title>
-    <style>
-        body {
-            font-family: Arial;
-            max-width: 700px;
-            margin: 30px auto;
-        }
-        input, button {
-            padding: 8px;
-            margin: 4px 0;
-            width: 100%;
-        }
-        #chat {
-            border: 1px solid #ccc;
-            height: 300px;
-            overflow-y: auto;
-            padding: 10px;
-            margin: 10px 0;
-        }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>💬 Chat App - Modern Messenger</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+    <div class="container">
+        <!-- Room Sidebar -->
+        <div class="sidebar" id="roomSidebar">
+            <div class="sidebar-header">
+                <h3>🏠 Phòng Chat</h3>
+                <div class="sidebar-subtitle">Danh sách các phòng</div>
+            </div>
+            <div class="sidebar-content" id="roomList">
+                <button class="new-room-btn btn-full" onclick="createNewRoom()">➕ Tạo phòng mới</button>
+            </div>
+        </div>
 
-<h2>Chat Room</h2>
+        <!-- User Sidebar -->
+        <div class="sidebar" id="userSidebar" style="display: none;">
+            <div class="sidebar-header">
+                <h3>👥 Thành viên</h3>
+                <div class="sidebar-subtitle" id="userCount">0 người online</div>
+            </div>
+            <div class="sidebar-content" id="userList"></div>
+        </div>
 
-<input id="username" placeholder="Tên của bạn">
-<input id="room" placeholder="Tên phòng (vd: Java)">
-<button onclick="join()">Vào phòng</button>
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Header -->
+            <div class="header">
+                <div class="header-left">
+                    <button class="toggle-sidebar-btn" onclick="toggleSidebar()">☰</button>
+                    <div>
+                        <h1 id="currentRoomName">💬 Chat App</h1>
+                        <div class="status">
+                            <span class="status-dot"></span>
+                            <span id="statusText">Đang kết nối...</span>
+                        </div>
+                    </div>
+                </div>
+                <button class="toggle-sidebar-btn" onclick="toggleUserSidebar()">👥 Thành viên</button>
+            </div>
 
-<div id="chat"></div>
+            <!-- Join Section -->
+            <div class="join-section" id="joinSection">
+                <div class="join-box">
+                    <h2 style="margin-bottom: 30px; text-align: center; color: #667eea;">Tham gia Chat</h2>
+                    <div class="input-group">
+                        <label>👤 Tên của bạn</label>
+                        <input type="text" id="username" placeholder="Nhập tên của bạn..." autocomplete="off">
+                    </div>
+                    <div class="input-group">
+                        <label>🏠 Tên phòng</label>
+                        <input type="text" id="room" placeholder="Ví dụ: Java, Python, React..." autocomplete="off" value="General">
+                    </div>
+                    <button class="btn-full" onclick="join()">🚀 Vào phòng chat</button>
+                </div>
+            </div>
 
-<input id="message" placeholder="Nhập tin nhắn">
-<button onclick="send()">Gửi</button>
+            <!-- Chat Area -->
+            <div class="chat-area" id="chatArea" style="display: none;"></div>
 
-<script>
-    const ws = new WebSocket("ws://localhost:8080/chat");
-    const chatDiv = document.getElementById("chat");
+            <!-- Typing Indicator -->
+            <div class="typing-indicator" id="typingIndicator"></div>
 
-    ws.onopen = () => log("✅ Kết nối server");
-    ws.onmessage = (e) => log(e.data);
-    ws.onclose = () => log("❌ Mất kết nối");
+            <!-- Input Area -->
+            <div class="input-area" style="display: none;" id="inputArea">
+                <div class="input-wrapper">
+                    <input type="text" id="message" placeholder="Nhập tin nhắn..." autocomplete="off" 
+                           onkeypress="handleEnter(event)" oninput="handleTyping()">
+                    <label for="fileInput" class="file-upload-btn" title="Gửi file">📎</label>
+                    <input type="file" id="fileInput" style="display: none;" 
+                           onchange="handleFileSelect(event)" 
+                           accept="image/*,video/*,.pdf,.doc,.docx">
+                </div>
+                <button class="send-btn" onclick="send()">📤 Gửi</button>
+            </div>
 
-    function log(text) {
-        chatDiv.innerHTML += `<div>${text}</div>`;
-        chatDiv.scrollTop = chatDiv.scrollHeight;
-    }
+            <!-- Private Chat Overlay -->
+            <div class="private-chat-overlay" id="privateChatOverlay">
+                <div class="private-chat-header">
+                    <div class="private-chat-title" id="privateChatTitle">💬 Chat riêng</div>
+                    <button class="close-private-btn" onclick="closePrivateChat()">✕ Đóng</button>
+                </div>
+                <div class="chat-area" id="privateChatArea"></div>
+                <div class="typing-indicator"></div>
+                <div class="input-area">
+                    <input type="text" id="privateMessage" placeholder="Nhập tin nhắn riêng..." 
+                           autocomplete="off" onkeypress="handlePrivateEnter(event)" 
+                           style="padding-right: 16px;">
+                    <button class="send-btn" onclick="sendPrivate()">📤 Gửi</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
-    function join() {
-        const user = username.value;
-        const roomName = room.value;
-        ws.send(`JOIN|${roomName}|${user}`);
-    }
-
-    function send() {
-        ws.send(`MSG|${message.value}`);
-        message.value = "";
-    }
-</script>
-
+    <script src="app.js"></script>
 </body>
 </html>

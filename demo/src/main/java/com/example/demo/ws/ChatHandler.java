@@ -1,11 +1,19 @@
 package com.example.demo.ws;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
+
 import org.springframework.stereotype.Component;
-import org.springframework.web.socket.*;
+import org.springframework.web.socket.CloseStatus;
+import org.springframework.web.socket.TextMessage;
+import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Component
 public class ChatHandler extends TextWebSocketHandler {
@@ -14,15 +22,22 @@ public class ChatHandler extends TextWebSocketHandler {
     private final Map<String, Set<WebSocketSession>> rooms = new ConcurrentHashMap<>();
     private final Map<String, String> sessionRoom = new ConcurrentHashMap<>();
     private final Map<String, String> sessionUser = new ConcurrentHashMap<>();
+    private final Map<String, String> sessionAvatar = new ConcurrentHashMap<>();
+    
+    // username -> session for private messaging
+    private final Map<String, WebSocketSession> userSessions = new ConcurrentHashMap<>();
+    
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
-        String[] parts = message.getPayload().split("\\|", 3);
+        String[] parts = message.getPayload().split("\\|", 5);
         String type = parts[0];
 
         if ("JOIN".equals(type)) {
             String room = parts[1];
             String user = parts[2];
+            String avatar = parts.length > 3 ? parts[3] : getInitials(user);
 
             leave(session);
 
@@ -30,33 +45,160 @@ public class ChatHandler extends TextWebSocketHandler {
             rooms.get(room).add(session);
             sessionRoom.put(session.getId(), room);
             sessionUser.put(session.getId(), user);
+            sessionAvatar.put(session.getId(), avatar);
+            userSessions.put(user, session);
 
             broadcast(room, "SYS|" + user + " joined room");
+            broadcastUserList(room);
+            broadcastRoomList();
         }
 
         if ("MSG".equals(type)) {
             String room = sessionRoom.get(session.getId());
             String user = sessionUser.get(session.getId());
+            String text = parts[1];
             if (room != null) {
-                broadcast(room, "MSG|" + user + "|" + parts[1]);
+                broadcast(room, "MSG|" + user + "|" + text + "|" + System.currentTimeMillis());
             }
         }
+
+        if ("PRIVATE".equals(type)) {
+            String targetUser = parts[1];
+            String text = parts[2];
+            String fromUser = sessionUser.get(session.getId());
+            
+            WebSocketSession targetSession = userSessions.get(targetUser);
+            if (targetSession != null && targetSession.isOpen()) {
+                targetSession.sendMessage(new TextMessage("PRIVATE|" + fromUser + "|" + text + "|" + System.currentTimeMillis()));
+                session.sendMessage(new TextMessage("PRIVATE_SENT|" + targetUser + "|" + text + "|" + System.currentTimeMillis()));
+            }
+        }
+
+        if ("TYPING".equals(type)) {
+            String room = sessionRoom.get(session.getId());
+            String user = sessionUser.get(session.getId());
+            if (room != null) {
+                broadcastExcept(room, session, "TYPING|" + user);
+            }
+        }
+
+        if ("GET_ROOMS".equals(type)) {
+            sendRoomList(session);
+        }
+    }
+
+    @Override
+    public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
+        leave(session);
+        super.afterConnectionClosed(session, status);
     }
 
     private void leave(WebSocketSession session) throws Exception {
         String room = sessionRoom.remove(session.getId());
         String user = sessionUser.remove(session.getId());
-        if (room != null) {
+        sessionAvatar.remove(session.getId());
+        
+        if (user != null) {
+            userSessions.remove(user);
+        }
+        
+        if (room != null && rooms.containsKey(room)) {
             rooms.get(room).remove(session);
-            broadcast(room, "SYS|" + user + " left room");
+            if (user != null) {
+                broadcast(room, "SYS|" + user + " left room");
+                broadcastUserList(room);
+            }
+            
+            // Remove empty rooms
+            if (rooms.get(room).isEmpty()) {
+                rooms.remove(room);
+            }
+            broadcastRoomList();
         }
     }
 
     private void broadcast(String room, String msg) throws Exception {
-        for (WebSocketSession s : rooms.get(room)) {
-            if (s.isOpen()) {
-                s.sendMessage(new TextMessage(msg));
+        Set<WebSocketSession> roomSessions = rooms.get(room);
+        if (roomSessions != null) {
+            for (WebSocketSession s : roomSessions) {
+                if (s.isOpen()) {
+                    s.sendMessage(new TextMessage(msg));
+                }
             }
         }
+    }
+
+    private void broadcastExcept(String room, WebSocketSession except, String msg) throws Exception {
+        Set<WebSocketSession> roomSessions = rooms.get(room);
+        if (roomSessions != null) {
+            for (WebSocketSession s : roomSessions) {
+                if (s.isOpen() && !s.getId().equals(except.getId())) {
+                    s.sendMessage(new TextMessage(msg));
+                }
+            }
+        }
+    }
+
+    private void broadcastUserList(String room) throws Exception {
+        Set<WebSocketSession> roomSessions = rooms.get(room);
+        if (roomSessions == null) return;
+
+        List<Map<String, String>> users = roomSessions.stream()
+            .filter(WebSocketSession::isOpen)
+            .map(s -> {
+                Map<String, String> user = new HashMap<>();
+                user.put("username", sessionUser.get(s.getId()));
+                user.put("avatar", sessionAvatar.get(s.getId()));
+                return user;
+            })
+            .collect(Collectors.toList());
+
+        String userListJson = objectMapper.writeValueAsString(users);
+        broadcast(room, "USERS|" + userListJson);
+    }
+
+    private void broadcastRoomList() throws Exception {
+        List<Map<String, Object>> roomList = rooms.entrySet().stream()
+            .map(entry -> {
+                Map<String, Object> roomInfo = new HashMap<>();
+                roomInfo.put("name", entry.getKey());
+                roomInfo.put("count", entry.getValue().size());
+                return roomInfo;
+            })
+            .collect(Collectors.toList());
+
+        String roomListJson = objectMapper.writeValueAsString(roomList);
+        
+        // Broadcast to all connected sessions
+        for (WebSocketSession s : userSessions.values()) {
+            if (s.isOpen()) {
+                s.sendMessage(new TextMessage("ROOMS|" + roomListJson));
+            }
+        }
+    }
+
+    private void sendRoomList(WebSocketSession session) throws Exception {
+        List<Map<String, Object>> roomList = rooms.entrySet().stream()
+            .map(entry -> {
+                Map<String, Object> roomInfo = new HashMap<>();
+                roomInfo.put("name", entry.getKey());
+                roomInfo.put("count", entry.getValue().size());
+                return roomInfo;
+            })
+            .collect(Collectors.toList());
+
+        String roomListJson = objectMapper.writeValueAsString(roomList);
+        if (session.isOpen()) {
+            session.sendMessage(new TextMessage("ROOMS|" + roomListJson));
+        }
+    }
+
+    private String getInitials(String name) {
+        if (name == null || name.isEmpty()) return "?";
+        String[] parts = name.trim().split("\\s+");
+        if (parts.length >= 2) {
+            return (parts[0].charAt(0) + "" + parts[1].charAt(0)).toUpperCase();
+        }
+        return name.substring(0, Math.min(2, name.length())).toUpperCase();
     }
 }
