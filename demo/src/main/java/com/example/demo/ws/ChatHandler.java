@@ -1,5 +1,6 @@
 package com.example.demo.ws;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -23,10 +24,14 @@ public class ChatHandler extends TextWebSocketHandler {
     private final Map<String, String> sessionRoom = new ConcurrentHashMap<>();
     private final Map<String, String> sessionUser = new ConcurrentHashMap<>();
     private final Map<String, String> sessionAvatar = new ConcurrentHashMap<>();
-    
-    // username -> session for private messaging
+
+    // username -> session (private chat)
     private final Map<String, WebSocketSession> userSessions = new ConcurrentHashMap<>();
-    
+
+    // 🔥 LƯU LỊCH SỬ CHAT IN-MEMORY (room -> messages)
+    private final Map<String, List<String>> chatHistory = new ConcurrentHashMap<>();
+    private static final int MAX_HISTORY = 50;
+
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
@@ -34,6 +39,7 @@ public class ChatHandler extends TextWebSocketHandler {
         String[] parts = message.getPayload().split("\\|", 5);
         String type = parts[0];
 
+        // ================= JOIN =================
         if ("JOIN".equals(type)) {
             String room = parts[1];
             String user = parts[2];
@@ -43,6 +49,7 @@ public class ChatHandler extends TextWebSocketHandler {
 
             rooms.putIfAbsent(room, ConcurrentHashMap.newKeySet());
             rooms.get(room).add(session);
+
             sessionRoom.put(session.getId(), room);
             sessionUser.put(session.getId(), user);
             sessionAvatar.put(session.getId(), avatar);
@@ -51,29 +58,55 @@ public class ChatHandler extends TextWebSocketHandler {
             broadcast(room, "SYS|" + user + " joined room");
             broadcastUserList(room);
             broadcastRoomList();
+
+            // 🔥 GỬI LỊCH SỬ CHAT CHO USER MỚI
+            List<String> history = chatHistory.get(room);
+            if (history != null) {
+                for (String oldMsg : history) {
+                    session.sendMessage(new TextMessage("HISTORY|" + oldMsg));
+                }
+            }
         }
 
+        // ================= MESSAGE =================
         if ("MSG".equals(type)) {
             String room = sessionRoom.get(session.getId());
             String user = sessionUser.get(session.getId());
             String text = parts[1];
+
             if (room != null) {
-                broadcast(room, "MSG|" + user + "|" + text + "|" + System.currentTimeMillis());
+                String msg = "MSG|" + user + "|" + text + "|" + System.currentTimeMillis();
+
+                // 🔥 LƯU LỊCH SỬ CHAT
+                chatHistory.putIfAbsent(room, new ArrayList<>());
+                List<String> history = chatHistory.get(room);
+                history.add(msg);
+
+                // Giới hạn số tin nhắn
+                if (history.size() > MAX_HISTORY) {
+                    history.remove(0);
+                }
+
+                broadcast(room, msg);
             }
         }
 
+        // ================= PRIVATE =================
         if ("PRIVATE".equals(type)) {
             String targetUser = parts[1];
             String text = parts[2];
             String fromUser = sessionUser.get(session.getId());
-            
+
             WebSocketSession targetSession = userSessions.get(targetUser);
             if (targetSession != null && targetSession.isOpen()) {
-                targetSession.sendMessage(new TextMessage("PRIVATE|" + fromUser + "|" + text + "|" + System.currentTimeMillis()));
-                session.sendMessage(new TextMessage("PRIVATE_SENT|" + targetUser + "|" + text + "|" + System.currentTimeMillis()));
+                targetSession.sendMessage(
+                        new TextMessage("PRIVATE|" + fromUser + "|" + text + "|" + System.currentTimeMillis()));
+                session.sendMessage(
+                        new TextMessage("PRIVATE_SENT|" + targetUser + "|" + text + "|" + System.currentTimeMillis()));
             }
         }
 
+        // ================= TYPING =================
         if ("TYPING".equals(type)) {
             String room = sessionRoom.get(session.getId());
             String user = sessionUser.get(session.getId());
@@ -82,6 +115,7 @@ public class ChatHandler extends TextWebSocketHandler {
             }
         }
 
+        // ================= GET ROOMS =================
         if ("GET_ROOMS".equals(type)) {
             sendRoomList(session);
         }
@@ -97,22 +131,25 @@ public class ChatHandler extends TextWebSocketHandler {
         String room = sessionRoom.remove(session.getId());
         String user = sessionUser.remove(session.getId());
         sessionAvatar.remove(session.getId());
-        
+
         if (user != null) {
             userSessions.remove(user);
         }
-        
+
         if (room != null && rooms.containsKey(room)) {
             rooms.get(room).remove(session);
+
             if (user != null) {
                 broadcast(room, "SYS|" + user + " left room");
                 broadcastUserList(room);
             }
-            
-            // Remove empty rooms
+
+            // 🔥 XÓA PHÒNG + LỊCH SỬ NẾU RỖNG
             if (rooms.get(room).isEmpty()) {
                 rooms.remove(room);
+                chatHistory.remove(room);
             }
+
             broadcastRoomList();
         }
     }
@@ -144,14 +181,14 @@ public class ChatHandler extends TextWebSocketHandler {
         if (roomSessions == null) return;
 
         List<Map<String, String>> users = roomSessions.stream()
-            .filter(WebSocketSession::isOpen)
-            .map(s -> {
-                Map<String, String> user = new HashMap<>();
-                user.put("username", sessionUser.get(s.getId()));
-                user.put("avatar", sessionAvatar.get(s.getId()));
-                return user;
-            })
-            .collect(Collectors.toList());
+                .filter(WebSocketSession::isOpen)
+                .map(s -> {
+                    Map<String, String> user = new HashMap<>();
+                    user.put("username", sessionUser.get(s.getId()));
+                    user.put("avatar", sessionAvatar.get(s.getId()));
+                    return user;
+                })
+                .collect(Collectors.toList());
 
         String userListJson = objectMapper.writeValueAsString(users);
         broadcast(room, "USERS|" + userListJson);
@@ -159,17 +196,16 @@ public class ChatHandler extends TextWebSocketHandler {
 
     private void broadcastRoomList() throws Exception {
         List<Map<String, Object>> roomList = rooms.entrySet().stream()
-            .map(entry -> {
-                Map<String, Object> roomInfo = new HashMap<>();
-                roomInfo.put("name", entry.getKey());
-                roomInfo.put("count", entry.getValue().size());
-                return roomInfo;
-            })
-            .collect(Collectors.toList());
+                .map(entry -> {
+                    Map<String, Object> roomInfo = new HashMap<>();
+                    roomInfo.put("name", entry.getKey());
+                    roomInfo.put("count", entry.getValue().size());
+                    return roomInfo;
+                })
+                .collect(Collectors.toList());
 
         String roomListJson = objectMapper.writeValueAsString(roomList);
-        
-        // Broadcast to all connected sessions
+
         for (WebSocketSession s : userSessions.values()) {
             if (s.isOpen()) {
                 s.sendMessage(new TextMessage("ROOMS|" + roomListJson));
@@ -179,13 +215,13 @@ public class ChatHandler extends TextWebSocketHandler {
 
     private void sendRoomList(WebSocketSession session) throws Exception {
         List<Map<String, Object>> roomList = rooms.entrySet().stream()
-            .map(entry -> {
-                Map<String, Object> roomInfo = new HashMap<>();
-                roomInfo.put("name", entry.getKey());
-                roomInfo.put("count", entry.getValue().size());
-                return roomInfo;
-            })
-            .collect(Collectors.toList());
+                .map(entry -> {
+                    Map<String, Object> roomInfo = new HashMap<>();
+                    roomInfo.put("name", entry.getKey());
+                    roomInfo.put("count", entry.getValue().size());
+                    return roomInfo;
+                })
+                .collect(Collectors.toList());
 
         String roomListJson = objectMapper.writeValueAsString(roomList);
         if (session.isOpen()) {
