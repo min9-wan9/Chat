@@ -24,15 +24,10 @@ public class ChatHandler extends TextWebSocketHandler {
     private final Map<String, String> sessionRoom = new ConcurrentHashMap<>();
     private final Map<String, String> sessionUser = new ConcurrentHashMap<>();
     private final Map<String, String> sessionAvatar = new ConcurrentHashMap<>();
-<<<<<<< HEAD
     private final Map<String, String> sessionIp = new ConcurrentHashMap<>();
     private final Map<String, String> sessionUniqueId = new ConcurrentHashMap<>();
     
     // username -> session for private messaging
-=======
-
-    // username -> session (private chat)
->>>>>>> b1a2c8915e2a872e0a850c1497d68b70c9cd7ccc
     private final Map<String, WebSocketSession> userSessions = new ConcurrentHashMap<>();
 
     // 🔥 LƯU LỊCH SỬ CHAT IN-MEMORY (room -> messages)
@@ -147,13 +142,9 @@ public class ChatHandler extends TextWebSocketHandler {
         String room = sessionRoom.remove(session.getId());
         String user = sessionUser.remove(session.getId());
         sessionAvatar.remove(session.getId());
-<<<<<<< HEAD
         sessionIp.remove(session.getId());
         sessionUniqueId.remove(session.getId());
         
-=======
-
->>>>>>> b1a2c8915e2a872e0a850c1497d68b70c9cd7ccc
         if (user != null) {
             userSessions.remove(user);
         }
@@ -203,7 +194,6 @@ public class ChatHandler extends TextWebSocketHandler {
         if (roomSessions == null) return;
 
         List<Map<String, String>> users = roomSessions.stream()
-<<<<<<< HEAD
             .filter(WebSocketSession::isOpen)
             .map(s -> {
                 Map<String, String> user = new HashMap<>();
@@ -214,16 +204,6 @@ public class ChatHandler extends TextWebSocketHandler {
                 return user;
             })
             .collect(Collectors.toList());
-=======
-                .filter(WebSocketSession::isOpen)
-                .map(s -> {
-                    Map<String, String> user = new HashMap<>();
-                    user.put("username", sessionUser.get(s.getId()));
-                    user.put("avatar", sessionAvatar.get(s.getId()));
-                    return user;
-                })
-                .collect(Collectors.toList());
->>>>>>> b1a2c8915e2a872e0a850c1497d68b70c9cd7ccc
 
         String userListJson = objectMapper.writeValueAsString(users);
         broadcast(room, "USERS|" + userListJson);

@@ -196,7 +196,6 @@ function updateUserList(users) {
             const status = document.createElement("div");
             status.className = "user-status";
             status.textContent = "● Online";
-<<<<<<< HEAD
             
             // Thêm thông tin IP và ID
             const details = document.createElement("div");
@@ -207,9 +206,6 @@ function updateUserList(users) {
                 </small>
             `;
             
-=======
-
->>>>>>> b1a2c8915e2a872e0a850c1497d68b70c9cd7ccc
             info.appendChild(name);
             info.appendChild(status);
             info.appendChild(details);
