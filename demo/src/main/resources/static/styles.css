@@ -349,7 +349,7 @@ button:active {
 
 .message.user { 
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-    color: white; 
+    color: black; 
     align-self: flex-end; 
     box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3); 
 }

@@ -285,15 +285,25 @@ ws.onopen = () => {
 };
 
 ws.onmessage = (event) => {
-    const parts = event.data.split("|");
-    const type = parts[0];
+    const data = event.data;
+    const firstPipe = data.indexOf("|");
+    const type = data.substring(0, firstPipe);
 
     // HISTORY|MSG|user|text|time
     if (type === "HISTORY") {
-        addMessage(parts[2], parts[3], parts[2] === currentUser, parts[4]);
+        // Lấy phần sau "HISTORY|"
+        const msgData = data.substring(firstPipe + 1);
+        const parts = msgData.split("|", 4);
+        // parts[0] = "MSG", parts[1] = user, parts[2] = text, parts[3] = time
+        const user = parts[1];
+        const text = parts[2];
+        const timestamp = parts[3];
+        addMessage(user, text, user === currentUser, timestamp);
         return;
     }
 
+    const parts = data.split("|");
+    
     if (type === "SYS") addSystemMessage(parts[1]);
     else if (type === "MSG") addMessage(parts[1], parts[2], parts[1] === currentUser, parts[3]);
     else if (type === "USERS") updateUserList(JSON.parse(parts[1]));
