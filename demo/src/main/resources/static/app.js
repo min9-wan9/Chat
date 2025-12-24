@@ -212,8 +212,18 @@ function updateUserList(users) {
             status.className = "user-status";
             status.textContent = "● Online";
             
+            // Thêm thông tin IP và ID
+            const details = document.createElement("div");
+            details.className = "user-details";
+            details.innerHTML = `
+                <small style="color: #6c757d; font-size: 11px;">
+                    ID: ${user.uniqueId || 'N/A'} | IP: ${user.ip || 'Unknown'}
+                </small>
+            `;
+            
             info.appendChild(name);
             info.appendChild(status);
+            info.appendChild(details);
             userDiv.appendChild(avatar);
             userDiv.appendChild(info);
             userList.appendChild(userDiv);

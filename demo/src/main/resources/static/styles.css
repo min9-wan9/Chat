@@ -143,6 +143,11 @@ body {
     color: #28a745; 
 }
 
+.user-details {
+    margin-top: 3px;
+    line-height: 1.2;
+}
+
 /* Main Content */
 .main-content { 
     flex: 1; 
@@ -470,7 +475,7 @@ button:active {
 .private-chat-header { 
     padding: 20px 30px; 
     background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); 
-    color: white; 
+    color: black; 
     display: flex; 
     align-items: center; 
     justify-content: space-between; 

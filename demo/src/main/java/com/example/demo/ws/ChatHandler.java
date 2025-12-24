@@ -23,6 +23,8 @@ public class ChatHandler extends TextWebSocketHandler {
     private final Map<String, String> sessionRoom = new ConcurrentHashMap<>();
     private final Map<String, String> sessionUser = new ConcurrentHashMap<>();
     private final Map<String, String> sessionAvatar = new ConcurrentHashMap<>();
+    private final Map<String, String> sessionIp = new ConcurrentHashMap<>();
+    private final Map<String, String> sessionUniqueId = new ConcurrentHashMap<>();
     
     // username -> session for private messaging
     private final Map<String, WebSocketSession> userSessions = new ConcurrentHashMap<>();
@@ -46,6 +48,15 @@ public class ChatHandler extends TextWebSocketHandler {
             sessionRoom.put(session.getId(), room);
             sessionUser.put(session.getId(), user);
             sessionAvatar.put(session.getId(), avatar);
+            
+            // Lấy IP address của client
+            String clientIp = getClientIp(session);
+            sessionIp.put(session.getId(), clientIp);
+            
+            // Tạo unique ID cho session
+            String uniqueId = generateUniqueId(session.getId());
+            sessionUniqueId.put(session.getId(), uniqueId);
+            
             userSessions.put(user, session);
 
             broadcast(room, "SYS|" + user + " joined room");
@@ -97,6 +108,8 @@ public class ChatHandler extends TextWebSocketHandler {
         String room = sessionRoom.remove(session.getId());
         String user = sessionUser.remove(session.getId());
         sessionAvatar.remove(session.getId());
+        sessionIp.remove(session.getId());
+        sessionUniqueId.remove(session.getId());
         
         if (user != null) {
             userSessions.remove(user);
@@ -149,6 +162,8 @@ public class ChatHandler extends TextWebSocketHandler {
                 Map<String, String> user = new HashMap<>();
                 user.put("username", sessionUser.get(s.getId()));
                 user.put("avatar", sessionAvatar.get(s.getId()));
+                user.put("ip", sessionIp.get(s.getId()));
+                user.put("uniqueId", sessionUniqueId.get(s.getId()));
                 return user;
             })
             .collect(Collectors.toList());
@@ -200,5 +215,25 @@ public class ChatHandler extends TextWebSocketHandler {
             return (parts[0].charAt(0) + "" + parts[1].charAt(0)).toUpperCase();
         }
         return name.substring(0, Math.min(2, name.length())).toUpperCase();
+    }
+    
+    private String getClientIp(WebSocketSession session) {
+        try {
+            // Lấy IP từ RemoteAddress
+            if (session.getRemoteAddress() != null && session.getRemoteAddress().getAddress() != null) {
+                return session.getRemoteAddress().getAddress().getHostAddress();
+            }
+        } catch (Exception e) {
+            // Nếu không lấy được, trả về unknown
+        }
+        return "Unknown";
+    }
+    
+    private String generateUniqueId(String sessionId) {
+        // Tạo ID ngắn từ 6 ký tự cuối của session ID
+        if (sessionId.length() >= 6) {
+            return sessionId.substring(sessionId.length() - 6).toUpperCase();
+        }
+        return sessionId.substring(0, Math.min(6, sessionId.length())).toUpperCase();
     }
 }
