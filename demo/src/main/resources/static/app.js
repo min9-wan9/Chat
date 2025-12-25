@@ -21,6 +21,84 @@ let currentRoom = "";
 let privateTarget = "";
 let typingTimeout = null;
 
+// Notification state
+let isWindowFocused = true;
+let unreadCount = 0;
+const originalTitle = document.title;
+
+// Private chat history: { username: [{sender, message, timestamp, isCurrentUser}] }
+const privateChatHistory = {};
+// Unread private messages count: { username: count }
+const unreadPrivateMessages = {};
+
+// ================= NOTIFICATION SUPPORT =================
+// Check if browser supports notifications
+function checkNotificationSupport() {
+    return "Notification" in window;
+}
+
+// Request notification permission
+function requestNotificationPermission() {
+    if (checkNotificationSupport() && Notification.permission === "default") {
+        Notification.requestPermission().then(permission => {
+            if (permission === "granted") {
+                console.log("✅ Notification permission granted");
+            } else {
+                console.log("❌ Notification permission denied");
+            }
+        });
+    }
+}
+
+// Show desktop notification with optional action
+function showNotificationWithAction(title, body, icon = "💬", action = null) {
+    if (!checkNotificationSupport() || Notification.permission !== "granted") {
+        return;
+    }
+
+    // Only show notification if window is not focused
+    if (isWindowFocused) {
+        return;
+    }
+
+    const notification = new Notification(title, {
+        body: body,
+        icon: icon,
+        badge: icon,
+        tag: "chat-notification",
+        requireInteraction: false
+    });
+
+    // Focus window and execute action when notification is clicked
+    notification.onclick = function () {
+        window.focus();
+        if (action) action();
+        notification.close();
+    };
+
+    // Auto close after 5 seconds
+    setTimeout(() => notification.close(), 5000);
+}
+
+// Track window focus state
+window.addEventListener("focus", () => {
+    isWindowFocused = true;
+    unreadCount = 0;
+    document.title = originalTitle;
+});
+
+window.addEventListener("blur", () => {
+    isWindowFocused = false;
+});
+
+// Update unread counter
+function incrementUnreadCount() {
+    if (!isWindowFocused) {
+        unreadCount++;
+        document.title = `(${unreadCount}) ${originalTitle}`;
+    }
+}
+
 // ================= JOIN =================
 function join() {
     const username = document.getElementById("username").value.trim();
@@ -42,6 +120,9 @@ function join() {
     userSidebar.style.display = "flex";
     currentRoomName.textContent = `🏠 ${room}`;
     messageInput.focus();
+
+    // Request notification permission when joining
+    requestNotificationPermission();
 }
 
 // ================= SEND MESSAGE =================
@@ -82,6 +163,16 @@ function addMessage(sender, message, isCurrentUser, timestamp) {
 
     chatArea.appendChild(messageDiv);
     chatArea.scrollTop = chatArea.scrollHeight;
+
+    // Show notification for messages from others
+    if (!isCurrentUser && sender !== currentUser) {
+        showNotificationWithAction(
+            `💬 Tin nhắn từ ${sender}`,
+            message,
+            "💬"
+        );
+        incrementUnreadCount();
+    }
 }
 
 // ================= SYSTEM MESSAGE =================
@@ -98,7 +189,22 @@ function openPrivateChat(username) {
     privateTarget = username;
     document.getElementById("privateChatTitle").textContent = `💬 Chat với ${username}`;
     document.getElementById("privateChatOverlay").classList.add("active");
+
+    // Clear current display
     privateChatArea.innerHTML = "";
+
+    // Load history for this user
+    const history = privateChatHistory[username] || [];
+    history.forEach(msg => {
+        renderPrivateMessage(msg.sender, msg.message, msg.isCurrentUser, msg.timestamp);
+    });
+
+    // Reset unread count for this user
+    unreadPrivateMessages[username] = 0;
+    updateUserListBadges();
+
+    // Focus input
+    document.getElementById("privateMessage").focus();
 }
 
 function closePrivateChat() {
@@ -122,7 +228,8 @@ function sendPrivate() {
     }
 }
 
-function addPrivateMessage(sender, message, isCurrentUser, timestamp) {
+// Render a single private message in the UI
+function renderPrivateMessage(sender, message, isCurrentUser, timestamp) {
     const messageDiv = document.createElement("div");
     messageDiv.className = isCurrentUser
         ? "message user private"
@@ -150,6 +257,40 @@ function addPrivateMessage(sender, message, isCurrentUser, timestamp) {
 
     privateChatArea.appendChild(messageDiv);
     privateChatArea.scrollTop = privateChatArea.scrollHeight;
+}
+
+function addPrivateMessage(sender, message, isCurrentUser, timestamp) {
+    // Determine the conversation partner (the other user)
+    const partner = isCurrentUser ? sender : sender; // sender is actually the other user's username
+
+    // Save to history
+    if (!privateChatHistory[partner]) {
+        privateChatHistory[partner] = [];
+    }
+    privateChatHistory[partner].push({
+        sender: isCurrentUser ? currentUser : sender,
+        message: message,
+        isCurrentUser: isCurrentUser,
+        timestamp: timestamp
+    });
+
+    // If private chat with this user is currently open, display the message
+    if (privateTarget === partner) {
+        renderPrivateMessage(sender, message, isCurrentUser, timestamp);
+    } else if (!isCurrentUser) {
+        // If not open and message is from someone else, increase unread count
+        unreadPrivateMessages[partner] = (unreadPrivateMessages[partner] || 0) + 1;
+        updateUserListBadges();
+
+        // Show notification with action to open private chat
+        showNotificationWithAction(
+            `🔒 Tin nhắn riêng từ ${sender}`,
+            message,
+            "🔒",
+            () => openPrivateChat(sender)
+        );
+        incrementUnreadCount();
+    }
 }
 
 // ================= ROOM HANDLING =================
@@ -193,10 +334,20 @@ function updateUserList(users) {
             name.className = "user-name";
             name.textContent = user.username;
 
+            // Add unread badge if any
+            const unreadCount = unreadPrivateMessages[user.username] || 0;
+            if (unreadCount > 0) {
+                const badge = document.createElement("span");
+                badge.className = "unread-badge";
+                badge.textContent = unreadCount;
+                badge.style.cssText = "background: #ef4444; color: white; border-radius: 10px; padding: 2px 8px; font-size: 11px; font-weight: bold; margin-left: 8px;";
+                name.appendChild(badge);
+            }
+
             const status = document.createElement("div");
             status.className = "user-status";
             status.textContent = "● Online";
-            
+
             // Thêm thông tin IP và ID
             const details = document.createElement("div");
             details.className = "user-details";
@@ -205,13 +356,37 @@ function updateUserList(users) {
                     ID: ${user.uniqueId || 'N/A'} | IP: ${user.ip || 'Unknown'}
                 </small>
             `;
-            
+
             info.appendChild(name);
             info.appendChild(status);
             info.appendChild(details);
             userDiv.appendChild(avatar);
             userDiv.appendChild(info);
             userList.appendChild(userDiv);
+        }
+    });
+}
+
+// Update badges in user list without re-rendering everything
+function updateUserListBadges() {
+    const userItems = document.querySelectorAll(".user-item");
+    userItems.forEach(item => {
+        const username = item.querySelector(".user-name").textContent.trim();
+        const unreadCount = unreadPrivateMessages[username] || 0;
+
+        // Remove existing badge
+        const existingBadge = item.querySelector(".unread-badge");
+        if (existingBadge) {
+            existingBadge.remove();
+        }
+
+        // Add new badge if count > 0
+        if (unreadCount > 0) {
+            const badge = document.createElement("span");
+            badge.className = "unread-badge";
+            badge.textContent = unreadCount;
+            badge.style.cssText = "background: #ef4444; color: white; border-radius: 10px; padding: 2px 8px; font-size: 11px; font-weight: bold; margin-left: 8px;";
+            item.querySelector(".user-name").appendChild(badge);
         }
     });
 }
@@ -262,7 +437,7 @@ function handleEnter(event) {
 function handleTyping() {
     clearTimeout(typingTimeout);
     ws.send("TYPING|");
-    typingTimeout = setTimeout(() => {}, 1000);
+    typingTimeout = setTimeout(() => { }, 1000);
 }
 
 function showTyping(username) {
