@@ -26,7 +26,7 @@ public class ChatHandler extends TextWebSocketHandler {
     private final Map<String, String> sessionAvatar = new ConcurrentHashMap<>();
     private final Map<String, String> sessionIp = new ConcurrentHashMap<>();
     private final Map<String, String> sessionUniqueId = new ConcurrentHashMap<>();
-    
+
     // username -> session for private messaging
     private final Map<String, WebSocketSession> userSessions = new ConcurrentHashMap<>();
 
@@ -55,15 +55,15 @@ public class ChatHandler extends TextWebSocketHandler {
             sessionRoom.put(session.getId(), room);
             sessionUser.put(session.getId(), user);
             sessionAvatar.put(session.getId(), avatar);
-            
+
             // Lấy IP address của client
             String clientIp = getClientIp(session);
             sessionIp.put(session.getId(), clientIp);
-            
+
             // Tạo unique ID cho session
             String uniqueId = generateUniqueId(session.getId());
             sessionUniqueId.put(session.getId(), uniqueId);
-            
+
             userSessions.put(user, session);
 
             broadcast(room, "SYS|" + user + " joined room");
@@ -117,12 +117,61 @@ public class ChatHandler extends TextWebSocketHandler {
             }
         }
 
+        // ================= PRIVATE FILE =================
+        if ("PRIVATE_FILE".equals(type)) {
+            String targetUser = parts[1];
+            String fileUrl = parts[2];
+            String fileType = parts[3];
+            String fileName = parts[4];
+            String fileSize = parts[5];
+            String fromUser = sessionUser.get(session.getId());
+
+            WebSocketSession targetSession = userSessions.get(targetUser);
+            if (targetSession != null && targetSession.isOpen()) {
+                String fileMsg = "PRIVATE_FILE|" + fromUser + "|" + fileUrl + "|" + fileType + "|" +
+                        fileName + "|" + fileSize + "|" + System.currentTimeMillis();
+                targetSession.sendMessage(new TextMessage(fileMsg));
+
+                String sentMsg = "PRIVATE_FILE_SENT|" + targetUser + "|" + fileUrl + "|" + fileType + "|" +
+                        fileName + "|" + fileSize + "|" + System.currentTimeMillis();
+                session.sendMessage(new TextMessage(sentMsg));
+            }
+        }
+
         // ================= TYPING =================
         if ("TYPING".equals(type)) {
             String room = sessionRoom.get(session.getId());
             String user = sessionUser.get(session.getId());
             if (room != null) {
                 broadcastExcept(room, session, "TYPING|" + user);
+            }
+        }
+
+        // ================= FILE =================
+        if ("FILE".equals(type)) {
+            String room = sessionRoom.get(session.getId());
+            String user = sessionUser.get(session.getId());
+
+            if (room != null && parts.length >= 5) {
+                String fileUrl = parts[1];
+                String fileType = parts[2];
+                String fileName = parts[3];
+                String fileSize = parts[4];
+
+                String fileMsg = "FILE|" + user + "|" + fileUrl + "|" + fileType + "|" + fileName + "|" + fileSize + "|"
+                        + System.currentTimeMillis();
+
+                // Save to chat history
+                chatHistory.putIfAbsent(room, new ArrayList<>());
+                List<String> history = chatHistory.get(room);
+                history.add(fileMsg);
+
+                // Limit history size
+                if (history.size() > MAX_HISTORY) {
+                    history.remove(0);
+                }
+
+                broadcast(room, fileMsg);
             }
         }
 
@@ -144,7 +193,7 @@ public class ChatHandler extends TextWebSocketHandler {
         sessionAvatar.remove(session.getId());
         sessionIp.remove(session.getId());
         sessionUniqueId.remove(session.getId());
-        
+
         if (user != null) {
             userSessions.remove(user);
         }
@@ -191,19 +240,20 @@ public class ChatHandler extends TextWebSocketHandler {
 
     private void broadcastUserList(String room) throws Exception {
         Set<WebSocketSession> roomSessions = rooms.get(room);
-        if (roomSessions == null) return;
+        if (roomSessions == null)
+            return;
 
         List<Map<String, String>> users = roomSessions.stream()
-            .filter(WebSocketSession::isOpen)
-            .map(s -> {
-                Map<String, String> user = new HashMap<>();
-                user.put("username", sessionUser.get(s.getId()));
-                user.put("avatar", sessionAvatar.get(s.getId()));
-                user.put("ip", sessionIp.get(s.getId()));
-                user.put("uniqueId", sessionUniqueId.get(s.getId()));
-                return user;
-            })
-            .collect(Collectors.toList());
+                .filter(WebSocketSession::isOpen)
+                .map(s -> {
+                    Map<String, String> user = new HashMap<>();
+                    user.put("username", sessionUser.get(s.getId()));
+                    user.put("avatar", sessionAvatar.get(s.getId()));
+                    user.put("ip", sessionIp.get(s.getId()));
+                    user.put("uniqueId", sessionUniqueId.get(s.getId()));
+                    return user;
+                })
+                .collect(Collectors.toList());
 
         String userListJson = objectMapper.writeValueAsString(users);
         broadcast(room, "USERS|" + userListJson);
@@ -245,14 +295,15 @@ public class ChatHandler extends TextWebSocketHandler {
     }
 
     private String getInitials(String name) {
-        if (name == null || name.isEmpty()) return "?";
+        if (name == null || name.isEmpty())
+            return "?";
         String[] parts = name.trim().split("\\s+");
         if (parts.length >= 2) {
             return (parts[0].charAt(0) + "" + parts[1].charAt(0)).toUpperCase();
         }
         return name.substring(0, Math.min(2, name.length())).toUpperCase();
     }
-    
+
     private String getClientIp(WebSocketSession session) {
         try {
             // Lấy IP từ RemoteAddress
@@ -264,7 +315,7 @@ public class ChatHandler extends TextWebSocketHandler {
         }
         return "Unknown";
     }
-    
+
     private String generateUniqueId(String sessionId) {
         // Tạo ID ngắn từ 6 ký tự cuối của session ID
         if (sessionId.length() >= 6) {

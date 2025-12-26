@@ -196,7 +196,13 @@ function openPrivateChat(username) {
     // Load history for this user
     const history = privateChatHistory[username] || [];
     history.forEach(msg => {
-        renderPrivateMessage(msg.sender, msg.message, msg.isCurrentUser, msg.timestamp);
+        if (msg.isFile) {
+            // Render file message
+            renderPrivateFileMessage(msg.sender, msg.fileUrl, msg.fileType, msg.fileName, msg.fileSize, msg.isCurrentUser, msg.timestamp);
+        } else {
+            // Render text message
+            renderPrivateMessage(msg.sender, msg.message, msg.isCurrentUser, msg.timestamp);
+        }
     });
 
     // Reset unread count for this user
@@ -227,6 +233,163 @@ function sendPrivate() {
         input.value = "";
     }
 }
+
+// ================= PRIVATE FILE HANDLING =================
+async function handlePrivateFileSelect(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // Validate file size (10MB)
+    if (file.size > 10 * 1024 * 1024) {
+        alert("❌ File quá lớn! Tối đa 10MB");
+        event.target.value = "";
+        return;
+    }
+
+    if (!privateTarget) {
+        alert("❌ Vui lòng chọn người nhận");
+        event.target.value = "";
+        return;
+    }
+
+    // Show uploading indicator
+    const uploadingMsg = document.createElement("div");
+    uploadingMsg.className = "message system";
+    uploadingMsg.textContent = "📤 Đang tải file...";
+    privateChatArea.appendChild(uploadingMsg);
+    privateChatArea.scrollTop = privateChatArea.scrollHeight;
+
+    try {
+        // Upload file to server
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const response = await fetch("/api/files/upload", {
+            method: "POST",
+            body: formData
+        });
+
+        if (!response.ok) {
+            throw new Error("Upload failed");
+        }
+
+        const result = await response.json();
+
+        // Remove uploading indicator
+        privateChatArea.removeChild(uploadingMsg);
+
+        // Send file info via WebSocket
+        ws.send(`PRIVATE_FILE|${privateTarget}|${result.url}|${result.type}|${file.name}|${result.size}`);
+
+        // Clear file input
+        event.target.value = "";
+
+    } catch (error) {
+        console.error("Private file upload error:", error);
+        uploadingMsg.textContent = "❌ Lỗi khi tải file";
+        uploadingMsg.style.background = "#fee";
+        uploadingMsg.style.color = "#c00";
+    }
+}
+
+function addPrivateFileMessage(sender, fileUrl, fileType, fileName, fileSize, isCurrentUser, timestamp) {
+    // Determine the conversation partner
+    // When isCurrentUser=true, sender param is actually the target user (from PRIVATE_FILE_SENT)
+    // When isCurrentUser=false, sender param is the actual sender (from PRIVATE_FILE)
+    const partner = sender;
+
+    // Save to history
+    if (!privateChatHistory[partner]) {
+        privateChatHistory[partner] = [];
+    }
+    privateChatHistory[partner].push({
+        sender: isCurrentUser ? currentUser : sender,
+        fileUrl: fileUrl,
+        fileType: fileType,
+        fileName: fileName,
+        fileSize: fileSize,
+        isFile: true,
+        isCurrentUser: isCurrentUser,
+        timestamp: timestamp
+    });
+
+    // If private chat with this user is currently open, display the file
+    if (privateTarget === partner) {
+        renderPrivateFileMessage(sender, fileUrl, fileType, fileName, fileSize, isCurrentUser, timestamp);
+    } else if (!isCurrentUser) {
+        // If not open and file is from someone else, increase unread count
+        unreadPrivateMessages[partner] = (unreadPrivateMessages[partner] || 0) + 1;
+        updateUserListBadges();
+
+        // Show notification with action to open private chat
+        showNotificationWithAction(
+            `📎 File riêng từ ${sender}`,
+            `${fileName} (${formatFileSize(fileSize)})`,
+            "📎",
+            () => openPrivateChat(sender)
+        );
+        incrementUnreadCount();
+    }
+}
+
+function renderPrivateFileMessage(sender, fileUrl, fileType, fileName, fileSize, isCurrentUser, timestamp) {
+    const messageDiv = document.createElement("div");
+    messageDiv.className = isCurrentUser ? "message user private" : "message other private";
+
+    const header = document.createElement("div");
+    header.className = "message-header";
+
+    const senderSpan = document.createElement("span");
+    senderSpan.className = "message-sender";
+    senderSpan.textContent = isCurrentUser ? "Bạn" : sender;
+    header.appendChild(senderSpan);
+
+    const timeSpan = document.createElement("span");
+    timeSpan.className = "message-time";
+    timeSpan.textContent = formatTime(timestamp);
+    header.appendChild(timeSpan);
+
+    messageDiv.appendChild(header);
+
+    // File content based on type
+    const fileDiv = document.createElement("div");
+    fileDiv.className = "message-file";
+
+    if (fileType === "image") {
+        const img = document.createElement("img");
+        img.src = fileUrl;
+        img.alt = fileName;
+        img.style.maxWidth = "300px";
+        img.style.maxHeight = "300px";
+        img.style.borderRadius = "8px";
+        img.style.cursor = "pointer";
+        img.onclick = () => window.open(fileUrl, "_blank");
+        fileDiv.appendChild(img);
+    } else if (fileType === "video") {
+        const video = document.createElement("video");
+        video.src = fileUrl;
+        video.controls = true;
+        video.style.maxWidth = "400px";
+        video.style.maxHeight = "300px";
+        video.style.borderRadius = "8px";
+        fileDiv.appendChild(video);
+    } else {
+        // For other files (document, audio, file)
+        const link = document.createElement("a");
+        link.href = fileUrl;
+        link.download = fileName;
+        link.textContent = `📎 ${fileName} (${formatFileSize(fileSize)})`;
+        link.style.color = isCurrentUser ? "#fff" : "#667eea";
+        link.style.textDecoration = "underline";
+        link.style.fontWeight = "500";
+        fileDiv.appendChild(link);
+    }
+
+    messageDiv.appendChild(fileDiv);
+    privateChatArea.appendChild(messageDiv);
+    privateChatArea.scrollTop = privateChatArea.scrollHeight;
+}
+
 
 // Render a single private message in the UI
 function renderPrivateMessage(sender, message, isCurrentUser, timestamp) {
@@ -478,7 +641,7 @@ ws.onmessage = (event) => {
     }
 
     const parts = data.split("|");
-    
+
     if (type === "SYS") addSystemMessage(parts[1]);
     else if (type === "MSG") addMessage(parts[1], parts[2], parts[1] === currentUser, parts[3]);
     else if (type === "USERS") updateUserList(JSON.parse(parts[1]));
@@ -486,6 +649,18 @@ ws.onmessage = (event) => {
     else if (type === "PRIVATE") addPrivateMessage(parts[1], parts[2], false, parts[3]);
     else if (type === "PRIVATE_SENT") addPrivateMessage(parts[1], parts[2], true, parts[3]);
     else if (type === "TYPING") showTyping(parts[1]);
+    else if (type === "FILE") {
+        // FILE|sender|fileUrl|fileType|fileName|fileSize|timestamp
+        addFileMessage(parts[1], parts[2], parts[3], parts[4], parts[5], parts[1] === currentUser, parts[6]);
+    }
+    else if (type === "PRIVATE_FILE") {
+        // PRIVATE_FILE|sender|fileUrl|fileType|fileName|fileSize|timestamp
+        addPrivateFileMessage(parts[1], parts[2], parts[3], parts[4], parts[5], false, parts[6]);
+    }
+    else if (type === "PRIVATE_FILE_SENT") {
+        // PRIVATE_FILE_SENT|targetUser|fileUrl|fileType|fileName|fileSize|timestamp
+        addPrivateFileMessage(parts[1], parts[2], parts[3], parts[4], parts[5], true, parts[6]);
+    }
 };
 
 ws.onclose = () => {
@@ -523,3 +698,134 @@ function getColorFromName(name) {
     for (let i = 0; i < name.length; i++) hash += name.charCodeAt(i);
     return colors[hash % colors.length];
 }
+
+// ================= FILE HANDLING =================
+async function handleFileSelect(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // Validate file size (10MB)
+    if (file.size > 10 * 1024 * 1024) {
+        alert("❌ File quá lớn! Tối đa 10MB");
+        event.target.value = "";
+        return;
+    }
+
+    // Show uploading indicator
+    const uploadingMsg = document.createElement("div");
+    uploadingMsg.className = "message system";
+    uploadingMsg.textContent = "📤 Đang tải file...";
+    chatArea.appendChild(uploadingMsg);
+    chatArea.scrollTop = chatArea.scrollHeight;
+
+    try {
+        // Upload file to server
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const response = await fetch("/api/files/upload", {
+            method: "POST",
+            body: formData
+        });
+
+        if (!response.ok) {
+            throw new Error("Upload failed");
+        }
+
+        const result = await response.json();
+
+        // Remove uploading indicator
+        chatArea.removeChild(uploadingMsg);
+
+        // Send file info via WebSocket
+        ws.send(`FILE|${result.url}|${result.type}|${file.name}|${result.size}`);
+
+        // Clear file input
+        event.target.value = "";
+
+    } catch (error) {
+        console.error("File upload error:", error);
+        uploadingMsg.textContent = "❌ Lỗi khi tải file";
+        uploadingMsg.style.background = "#fee";
+        uploadingMsg.style.color = "#c00";
+    }
+}
+
+function addFileMessage(sender, fileUrl, fileType, fileName, fileSize, isCurrentUser, timestamp) {
+    const messageDiv = document.createElement("div");
+    messageDiv.className = isCurrentUser ? "message user" : "message other";
+
+    const header = document.createElement("div");
+    header.className = "message-header";
+
+    if (!isCurrentUser) {
+        const senderSpan = document.createElement("span");
+        senderSpan.className = "message-sender";
+        senderSpan.textContent = sender;
+        header.appendChild(senderSpan);
+    }
+
+    const timeSpan = document.createElement("span");
+    timeSpan.className = "message-time";
+    timeSpan.textContent = formatTime(timestamp);
+    header.appendChild(timeSpan);
+
+    messageDiv.appendChild(header);
+
+    // File content based on type
+    const fileDiv = document.createElement("div");
+    fileDiv.className = "message-file";
+
+    if (fileType === "image") {
+        const img = document.createElement("img");
+        img.src = fileUrl;
+        img.alt = fileName;
+        img.style.maxWidth = "300px";
+        img.style.maxHeight = "300px";
+        img.style.borderRadius = "8px";
+        img.style.cursor = "pointer";
+        img.onclick = () => window.open(fileUrl, "_blank");
+        fileDiv.appendChild(img);
+    } else if (fileType === "video") {
+        const video = document.createElement("video");
+        video.src = fileUrl;
+        video.controls = true;
+        video.style.maxWidth = "400px";
+        video.style.maxHeight = "300px";
+        video.style.borderRadius = "8px";
+        fileDiv.appendChild(video);
+    } else {
+        // For other files (document, audio, file)
+        const link = document.createElement("a");
+        link.href = fileUrl;
+        link.download = fileName;
+        link.textContent = `📎 ${fileName} (${formatFileSize(fileSize)})`;
+        link.style.color = isCurrentUser ? "#fff" : "#667eea";
+        link.style.textDecoration = "underline";
+        link.style.fontWeight = "500";
+        fileDiv.appendChild(link);
+    }
+
+    messageDiv.appendChild(fileDiv);
+    chatArea.appendChild(messageDiv);
+    chatArea.scrollTop = chatArea.scrollHeight;
+
+    // Show notification for messages from others
+    if (!isCurrentUser && sender !== currentUser) {
+        showNotificationWithAction(
+            `📎 File từ ${sender}`,
+            `${fileName} (${formatFileSize(fileSize)})`,
+            "📎"
+        );
+        incrementUnreadCount();
+    }
+}
+
+function formatFileSize(bytes) {
+    if (!bytes) return "0 B";
+    const k = 1024;
+    const sizes = ["B", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + " " + sizes[i];
+}
+

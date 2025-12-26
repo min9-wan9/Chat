@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>💬 Chat App - Modern Messenger</title>
     <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
     <div class="container">
         <!-- Room Sidebar -->
@@ -55,7 +57,8 @@
                     </div>
                     <div class="input-group">
                         <label>🏠 Tên phòng</label>
-                        <input type="text" id="room" placeholder="Ví dụ: Java, Python, React..." autocomplete="off" value="General">
+                        <input type="text" id="room" placeholder="Ví dụ: Java, Python, React..." autocomplete="off"
+                            value="General">
                     </div>
                     <button class="btn-full" onclick="join()">🚀 Vào phòng chat</button>
                 </div>
@@ -70,12 +73,11 @@
             <!-- Input Area -->
             <div class="input-area" style="display: none;" id="inputArea">
                 <div class="input-wrapper">
-                    <input type="text" id="message" placeholder="Nhập tin nhắn..." autocomplete="off" 
-                           onkeypress="handleEnter(event)" oninput="handleTyping()">
+                    <input type="text" id="message" placeholder="Nhập tin nhắn..." autocomplete="off"
+                        onkeypress="handleEnter(event)" oninput="handleTyping()">
                     <label for="fileInput" class="file-upload-btn" title="Gửi file">📎</label>
-                    <input type="file" id="fileInput" style="display: none;" 
-                           onchange="handleFileSelect(event)" 
-                           accept="image/*,video/*,.pdf,.doc,.docx">
+                    <input type="file" id="fileInput" style="display: none;" onchange="handleFileSelect(event)"
+                        accept="image/*,video/*,.pdf,.doc,.docx">
                 </div>
                 <button class="send-btn" onclick="send()">📤 Gửi</button>
             </div>
@@ -89,9 +91,13 @@
                 <div class="chat-area" id="privateChatArea"></div>
                 <div class="typing-indicator"></div>
                 <div class="input-area">
-                    <input type="text" id="privateMessage" placeholder="Nhập tin nhắn riêng..." 
-                           autocomplete="off" onkeypress="handlePrivateEnter(event)" 
-                           style="padding-right: 16px;">
+                    <div class="input-wrapper">
+                        <input type="text" id="privateMessage" placeholder="Nhập tin nhắn riêng..." autocomplete="off"
+                            onkeypress="handlePrivateEnter(event)">
+                        <label for="privateFileInput" class="file-upload-btn" title="Gửi file riêng">📎</label>
+                        <input type="file" id="privateFileInput" style="display: none;"
+                            onchange="handlePrivateFileSelect(event)" accept="image/*,video/*,.pdf,.doc,.docx">
+                    </div>
                     <button class="send-btn" onclick="sendPrivate()">📤 Gửi</button>
                 </div>
             </div>
@@ -100,4 +106,5 @@
 
     <script src="app.js"></script>
 </body>
+
 </html>
