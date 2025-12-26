@@ -523,3 +523,42 @@ function getColorFromName(name) {
     for (let i = 0; i < name.length; i++) hash += name.charCodeAt(i);
     return colors[hash % colors.length];
 }
+// ================= FILE UPLOAD (FIX ERROR) =================
+function handleFileSelect(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    console.log("📎 File selected:", file.name, file.type, file.size);
+
+    // Tạm thời chỉ thông báo (chưa gửi lên server)
+    addSystemMessage(`📎 Đã chọn file: ${file.name}`);
+}
+function toggleSidebar() {
+    const roomSidebar = document.getElementById("roomSidebar");
+    roomSidebar.style.display =
+        roomSidebar.style.display === "none" ? "flex" : "none";
+}
+
+// ================= EMOJI STICKER (CÁCH 2) =================
+function toggleEmojiPanel() {
+    const panel = document.getElementById("emojiPanel");
+    panel.style.display = (panel.style.display === "none" || !panel.style.display) ? "flex" : "none";
+}
+
+// Sticker emoji gửi như tin nhắn thường
+function sendSticker(emoji) {
+    // gửi dưới dạng MSG để server không cần sửa
+    ws.send(`MSG|${emoji}`);
+    document.getElementById("emojiPanel").style.display = "none";
+    messageInput.focus();
+}
+
+// Bấm ra ngoài panel thì tự đóng
+document.addEventListener("click", (e) => {
+    const panel = document.getElementById("emojiPanel");
+    const btn = document.querySelector(".emoji-btn");
+    if (!panel || !btn) return;
+
+    const clickedInside = panel.contains(e.target) || btn.contains(e.target);
+    if (!clickedInside) panel.style.display = "none";
+});

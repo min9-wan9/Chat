@@ -4,7 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>💬 Chat App - Modern Messenger</title>
-    <link rel="stylesheet" href="styles.css">
+
+    <link rel="stylesheet" href="/styles.css">
+   
+
 </head>
 <body>
     <div class="container">
@@ -70,13 +73,30 @@
             <!-- Input Area -->
             <div class="input-area" style="display: none;" id="inputArea">
                 <div class="input-wrapper">
-                    <input type="text" id="message" placeholder="Nhập tin nhắn..." autocomplete="off" 
-                           onkeypress="handleEnter(event)" oninput="handleTyping()">
-                    <label for="fileInput" class="file-upload-btn" title="Gửi file">📎</label>
-                    <input type="file" id="fileInput" style="display: none;" 
-                           onchange="handleFileSelect(event)" 
-                           accept="image/*,video/*,.pdf,.doc,.docx">
-                </div>
+    <input type="text" id="message" placeholder="Nhập tin nhắn..." autocomplete="off"
+           onkeypress="handleEnter(event)" oninput="handleTyping()">
+
+    <!-- ✅ Nút sticker (emoji) -->
+    <button type="button" class="emoji-btn" onclick="toggleEmojiPanel()" title="Sticker">😄</button>
+
+    <!-- ✅ Panel emoji -->
+    <div class="emoji-panel" id="emojiPanel" style="display:none">
+        <span onclick="sendSticker('😂')">😂</span>
+        <span onclick="sendSticker('😭')">😭</span>
+        <span onclick="sendSticker('😍')">😍</span>
+        <span onclick="sendSticker('😡')">😡</span>
+        <span onclick="sendSticker('👍')">👍</span>
+        <span onclick="sendSticker('🔥')">🔥</span>
+        <span onclick="sendSticker('🎉')">🎉</span>
+        <span onclick="sendSticker('💯')">💯</span>
+    </div>
+
+    <label for="fileInput" class="file-upload-btn" title="Gửi file">📎</label>
+    <input type="file" id="fileInput" style="display:none;"
+           onchange="handleFileSelect(event)"
+           accept="image/*,video/*,.pdf,.doc,.docx">
+</div>
+
                 <button class="send-btn" onclick="send()">📤 Gửi</button>
             </div>
 
