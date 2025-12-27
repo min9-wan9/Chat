@@ -1,3 +1,15 @@
+// ================= AUTH CHECK =================
+const loggedUser = localStorage.getItem("currentUser");
+if (!loggedUser) {
+    window.location.href = "/login.html";
+}
+
+// ✅ GÁN NGAY
+let currentUser = loggedUser;
+
+document.getElementById("currentUserName").textContent = currentUser;
+
+
 // ================= WEBSOCKET CONNECTION =================
 const serverHost = window.location.hostname || "localhost";
 const ws = new WebSocket(`ws://${serverHost}:8081/chat`);
@@ -16,7 +28,7 @@ const userSidebar = document.getElementById("userSidebar");
 const currentRoomName = document.getElementById("currentRoomName");
 
 // ================= STATE =================
-let currentUser = "";
+
 let currentRoom = "";
 let privateTarget = "";
 let typingTimeout = null;
@@ -101,18 +113,16 @@ function incrementUnreadCount() {
 
 // ================= JOIN =================
 function join() {
-    const username = document.getElementById("username").value.trim();
     const room = document.getElementById("room").value.trim();
 
-    if (!username || !room) {
-        alert("Vui lòng nhập đầy đủ tên và phòng!");
+    if (!room) {
+        alert("Vui lòng nhập tên phòng!");
         return;
     }
 
-    currentUser = username;
     currentRoom = room;
 
-    ws.send(`JOIN|${room}|${username}|${getInitials(username)}`);
+    ws.send(`JOIN|${room}|${currentUser}|${getInitials(currentUser)}`);
 
     joinSection.classList.add("hidden");
     chatArea.style.display = "flex";
@@ -121,9 +131,10 @@ function join() {
     currentRoomName.textContent = `🏠 ${room}`;
     messageInput.focus();
 
-    // Request notification permission when joining
     requestNotificationPermission();
 }
+
+
 
 // ================= SEND MESSAGE =================
 function send() {
@@ -133,6 +144,12 @@ function send() {
         messageInput.value = "";
     }
 }
+
+function logout() {
+    localStorage.removeItem("currentUser");
+    window.location.href = "login.html";
+}
+
 
 // ================= ADD MESSAGE (ROOM) =================
 function addMessage(sender, message, isCurrentUser, timestamp) {

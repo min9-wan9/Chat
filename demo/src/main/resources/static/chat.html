@@ -37,27 +37,40 @@
         <div class="main-content">
             <!-- Header -->
             <div class="header">
-                <div class="header-left">
-                    <button class="toggle-sidebar-btn" onclick="toggleSidebar()">☰</button>
-                    <div>
-                        <h1 id="currentRoomName">💬 Chat App</h1>
-                        <div class="status">
-                            <span class="status-dot"></span>
-                            <span id="statusText">Đang kết nối...</span>
-                        </div>
-                    </div>
-                </div>
-                <button class="toggle-sidebar-btn" onclick="toggleUserSidebar()">👥 Thành viên</button>
+    <div class="header-left">
+        <button class="toggle-sidebar-btn" onclick="toggleSidebar()">☰</button>
+        <div>
+            <h1 id="currentRoomName">💬 Chat App</h1>
+            <div class="status">
+                <span class="status-dot"></span>
+                <span id="statusText">Đang kết nối...</span>
             </div>
+        </div>
+    </div>
+
+    <div class="header-right">
+    <div class="user-current">
+        <span class="user-avatar">👤</span>
+        <span id="currentUserName"></span>
+    </div>
+
+    <button class="header-btn" onclick="toggleUserSidebar()">
+        👥 <span>Thành viên</span>
+    </button>
+
+    <button class="header-btn logout" onclick="logout()">
+        🚪 <span>Đăng xuất</span>
+    </button>
+</div>
+
+</div>
+
 
             <!-- Join Section -->
             <div class="join-section" id="joinSection">
                 <div class="join-box">
                     <h2 style="margin-bottom: 30px; text-align: center; color: #667eea;">Tham gia Chat</h2>
-                    <div class="input-group">
-                        <label>👤 Tên của bạn</label>
-                        <input type="text" id="username" placeholder="Nhập tên của bạn..." autocomplete="off">
-                    </div>
+                   
                     <div class="input-group">
                         <label>🏠 Tên phòng</label>
                         <input type="text" id="room" placeholder="Ví dụ: Java, Python, React..." autocomplete="off"

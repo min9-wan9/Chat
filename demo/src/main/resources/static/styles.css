@@ -582,4 +582,143 @@ button:active {
     box-shadow: 0 10px 30px rgba(0,0,0,0.12);
     z-index: 100;
 }
+/* ===== AUTH PAGE FIX ===== */
+.auth-page {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #6a5acd, #836fff);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+}
 
+.auth-container {
+    background: white;
+    width: 380px;
+    padding: 35px 30px;
+    border-radius: 18px;
+    box-shadow: 0 30px 60px rgba(0,0,0,0.25);
+    text-align: center;
+}
+
+.auth-title {
+    font-size: 26px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    color: #4f46e5;
+}
+
+.auth-subtitle {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 25px;
+}
+
+.auth-box {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.auth-box input {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid #ddd;
+    font-size: 15px;
+    outline: none;
+}
+
+.auth-box input:focus {
+    border-color: #4f46e5;
+    box-shadow: 0 0 0 2px rgba(79,70,229,0.2);
+}
+
+.auth-box button {
+    margin-top: 8px;
+    padding: 12px;
+    border-radius: 12px;
+    border: none;
+    background: linear-gradient(135deg, #4f46e5, #6366f1);
+    color: white;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.auth-box button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 30px rgba(79,70,229,0.4);
+}
+
+.auth-footer {
+    margin-top: 18px;
+    font-size: 14px;
+}
+
+.auth-footer a {
+    color: #4f46e5;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.auth-footer a:hover {
+    text-decoration: underline;
+}
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* User badge */
+.user-current {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255,255,255,0.18);
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #fff;
+}
+
+.user-avatar {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+}
+
+/* Header buttons */
+.header-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255,255,255,0.15);
+    border: none;
+    color: #fff;
+    padding: 6px 12px;
+    border-radius: 18px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.header-btn:hover {
+    background: rgba(255,255,255,0.25);
+}
+
+.header-btn.logout {
+    background: rgba(255, 82, 82, 0.25);
+}
+
+.header-btn.logout:hover {
+    background: rgba(255, 82, 82, 0.4);
+}
