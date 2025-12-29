@@ -1,126 +1,143 @@
 <!DOCTYPE html>
 <html lang="vi">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>💬 Chat App - Modern Messenger</title>
-
     <link rel="stylesheet" href="/styles.css">
-
-
 </head>
 
 <body>
-    <div class="container">
-        <!-- Room Sidebar -->
-        <div class="sidebar" id="roomSidebar">
-            <div class="sidebar-header">
-                <h3>🏠 Phòng Chat</h3>
-                <div class="sidebar-subtitle">Danh sách các phòng</div>
-            </div>
-            <div class="sidebar-content" id="roomList">
-                <button class="new-room-btn btn-full" onclick="createNewRoom()">➕ Tạo phòng mới</button>
-            </div>
-        </div>
+<div class="container">
 
-        <!-- User Sidebar -->
-        <div class="sidebar" id="userSidebar" style="display: none;">
-            <div class="sidebar-header">
-                <h3>👥 Thành viên</h3>
-                <div class="sidebar-subtitle" id="userCount">0 người online</div>
-            </div>
-            <div class="sidebar-content" id="userList"></div>
+    <!-- ========== ROOM SIDEBAR ========== -->
+    <div class="sidebar" id="roomSidebar">
+        <div class="sidebar-header">
+            <h3>🏠 Phòng Chat</h3>
+            <div class="sidebar-subtitle">Danh sách các phòng</div>
         </div>
-
-        <!-- Main Content -->
-        <div class="main-content">
-            <!-- Header -->
-            <div class="header">
-    <div class="header-left">
-        <button class="toggle-sidebar-btn" onclick="toggleSidebar()">☰</button>
-        <div>
-            <h1 id="currentRoomName">💬 Chat App</h1>
-            <div class="status">
-                <span class="status-dot"></span>
-                <span id="statusText">Đang kết nối...</span>
-            </div>
+        <div class="sidebar-content" id="roomList">
+            <button class="new-room-btn btn-full" onclick="createNewRoom()">➕ Tạo phòng mới</button>
         </div>
     </div>
 
-    <div class="header-right">
-    <div class="user-current">
-        <span class="user-avatar">👤</span>
-        <span id="currentUserName"></span>
+    <!-- ========== USER SIDEBAR ========== -->
+    <div class="sidebar" id="userSidebar" style="display:none">
+        <div class="sidebar-header">
+            <h3>👥 Thành viên</h3>
+            <div class="sidebar-subtitle" id="userCount">0 người online</div>
+        </div>
+        <div class="sidebar-content" id="userList"></div>
     </div>
 
-    <button class="header-btn" onclick="toggleUserSidebar()">
-        👥 <span>Thành viên</span>
-    </button>
+    <!-- ========== MAIN CONTENT ========== -->
+    <div class="main-content">
 
-    <button class="header-btn logout" onclick="logout()">
-        🚪 <span>Đăng xuất</span>
-    </button>
+        <!-- HEADER -->
+        <div class="header">
+            <div class="header-left">
+                <button class="toggle-sidebar-btn" onclick="toggleSidebar()">☰</button>
+                <div>
+                    <h1 id="currentRoomName">💬 Chat App</h1>
+                    <div class="status">
+                        <span class="status-dot"></span>
+                        <span id="statusText">Đang kết nối...</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="header-right">
+                <div class="user-current">
+                    <span class="user-avatar">👤</span>
+                    <span id="currentUserName"></span>
+                </div>
+
+                <button class="header-btn" onclick="toggleUserSidebar()">👥 Thành viên</button>
+                <button class="header-btn logout" onclick="logout()">🚪 Đăng xuất</button>
+            </div>
+        </div>
+
+        <!-- JOIN ROOM -->
+        <div class="join-section" id="joinSection">
+            <div class="join-box">
+                <h2 style="text-align:center;color:#667eea;margin-bottom:30px">Tham gia Chat</h2>
+                <div class="input-group">
+                    <label>🏠 Tên phòng</label>
+                    <input type="text" id="room" value="General">
+                </div>
+                <button class="btn-full" onclick="join()">🚀 Vào phòng chat</button>
+            </div>
+        </div>
+
+        <!-- CHAT AREA -->
+        <div class="chat-area" id="chatArea" style="display:none"></div>
+
+        <div class="typing-indicator" id="typingIndicator"></div>
+
+        <!-- INPUT AREA (CHAT THƯỜNG) -->
+        <div class="input-area" id="inputArea" style="display:none">
+            <div class="input-wrapper">
+                <input type="text" id="message"
+                       placeholder="Nhập tin nhắn..."
+                       onkeypress="handleEnter(event)"
+                       oninput="handleTyping()">
+
+                <!-- EMOJI -->
+                <button type="button" class="emoji-btn" onclick="toggleEmojiPanel()">😄</button>
+
+                <div class="emoji-panel" id="emojiPanel">
+                    <span onclick="insertEmoji('😂')">😂</span>
+                    <span onclick="insertEmoji('😭')">😭</span>
+                    <span onclick="insertEmoji('😍')">😍</span>
+                    <span onclick="insertEmoji('😡')">😡</span>
+                    <span onclick="insertEmoji('👍')">👍</span>
+                    <span onclick="insertEmoji('🔥')">🔥</span>
+                    <span onclick="insertEmoji('🎉')">🎉</span>
+                    <span onclick="insertEmoji('💯')">💯</span>
+                </div>
+
+                <label for="fileInput" class="file-upload-btn">📎</label>
+                <input type="file" id="fileInput" style="display:none"
+                       onchange="handleFileSelect(event)">
+            </div>
+            <button class="send-btn" onclick="send()">📤 Gửi</button>
+        </div>
+
+        <!-- PRIVATE CHAT -->
+        <div class="private-chat-overlay" id="privateChatOverlay">
+            <div class="private-chat-header">
+                <div class="private-chat-title" id="privateChatTitle">💬 Chat riêng</div>
+                <button class="close-private-btn" onclick="closePrivateChat()">✕</button>
+            </div>
+
+            <div class="chat-area" id="privateChatArea"></div>
+
+            <div class="input-area">
+                <input type="text" id="privateMessage"
+                       placeholder="Nhập tin nhắn riêng..."
+                       onkeypress="handlePrivateEnter(event)">
+                <button class="send-btn" onclick="sendPrivate()">📤 Gửi</button>
+            </div>
+        </div>
+
+    </div>
 </div>
 
-</div>
+<script src="app.js"></script>
 
+<!-- EMOJI SCRIPT (KHÔNG ĐỘNG TỚI LOGIC CŨ) -->
+<script>
+function toggleEmojiPanel() {
+    const panel = document.getElementById("emojiPanel");
+    panel.style.display = panel.style.display === "block" ? "none" : "block";
+}
 
-            <!-- Join Section -->
-            <div class="join-section" id="joinSection">
-                <div class="join-box">
-                    <h2 style="margin-bottom: 30px; text-align: center; color: #667eea;">Tham gia Chat</h2>
-                   
-                    <div class="input-group">
-                        <label>🏠 Tên phòng</label>
-                        <input type="text" id="room" placeholder="Ví dụ: Java, Python, React..." autocomplete="off"
-                            value="General">
-                    </div>
-                    <button class="btn-full" onclick="join()">🚀 Vào phòng chat</button>
-                </div>
-            </div>
+function insertEmoji(emoji) {
+    const input = document.getElementById("message");
+    input.value += emoji;
+    input.focus();
+}
+</script>
 
-            <!-- Chat Area -->
-            <div class="chat-area" id="chatArea" style="display: none;"></div>
-
-            <!-- Typing Indicator -->
-            <div class="typing-indicator" id="typingIndicator"></div>
-
-            <!-- Input Area -->
-            <div class="input-area" style="display: none;" id="inputArea">
-                <div class="input-wrapper">
-                    <input type="text" id="message" placeholder="Nhập tin nhắn..." autocomplete="off"
-                        onkeypress="handleEnter(event)" oninput="handleTyping()">
-                    <label for="fileInput" class="file-upload-btn" title="Gửi file">📎</label>
-                    <input type="file" id="fileInput" style="display: none;" onchange="handleFileSelect(event)"
-                        accept="image/*,video/*,.pdf,.doc,.docx">
-                </div>
-                <button class="send-btn" onclick="send()">📤 Gửi</button>
-            </div>
-
-            <!-- Private Chat Overlay -->
-            <div class="private-chat-overlay" id="privateChatOverlay">
-                <div class="private-chat-header">
-                    <div class="private-chat-title" id="privateChatTitle">💬 Chat riêng</div>
-                    <button class="close-private-btn" onclick="closePrivateChat()">✕ Đóng</button>
-                </div>
-                <div class="chat-area" id="privateChatArea"></div>
-                <div class="typing-indicator"></div>
-                <div class="input-area">
-                    <div class="input-wrapper">
-                        <input type="text" id="privateMessage" placeholder="Nhập tin nhắn riêng..." autocomplete="off"
-                            onkeypress="handlePrivateEnter(event)">
-                        <label for="privateFileInput" class="file-upload-btn" title="Gửi file riêng">📎</label>
-                        <input type="file" id="privateFileInput" style="display: none;"
-                            onchange="handlePrivateFileSelect(event)" accept="image/*,video/*,.pdf,.doc,.docx">
-                    </div>
-                    <button class="send-btn" onclick="sendPrivate()">📤 Gửi</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script src="app.js"></script>
 </body>
-
 </html>
