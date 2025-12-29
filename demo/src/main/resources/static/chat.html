@@ -113,11 +113,53 @@
             <div class="chat-area" id="privateChatArea"></div>
 
             <div class="input-area">
-                <input type="text" id="privateMessage"
-                       placeholder="Nhập tin nhắn riêng..."
-                       onkeypress="handlePrivateEnter(event)">
-                <button class="send-btn" onclick="sendPrivate()">📤 Gửi</button>
-            </div>
+    <div class="input-wrapper private-input">
+
+        <!-- Input chat riêng -->
+        <input type="text"
+               id="privateMessage"
+               placeholder="Nhập tin nhắn riêng..."
+               autocomplete="off"
+               onkeypress="handlePrivateEnter(event)">
+
+        <!-- Emoji button -->
+        <button type="button"
+                class="emoji-btn private"
+                onclick="togglePrivateEmoji()"
+                title="Emoji">😄</button>
+
+        <!-- File upload -->
+        <label for="privateFileInput"
+               class="file-upload-btn"
+               title="Gửi file">📎</label>
+        <input type="file"
+               id="privateFileInput"
+               style="display:none"
+               onchange="handlePrivateFileSelect(event)"
+               accept="image/*,video/*,.pdf,.doc,.docx">
+
+        <!-- Emoji panel -->
+        <div class="emoji-panel" id="privateEmojiPanel" style="display:none">
+            <span onclick="insertPrivateEmoji('😂')">😂</span>
+            <span onclick="insertPrivateEmoji('😭')">😭</span>
+            <span onclick="insertPrivateEmoji('😍')">😍</span>
+            <span onclick="insertPrivateEmoji('😡')">😡</span>
+            <span onclick="insertPrivateEmoji('👍')">👍</span>
+            <span onclick="insertPrivateEmoji('🔥')">🔥</span>
+            <span onclick="insertPrivateEmoji('🎉')">🎉</span>
+            <span onclick="insertPrivateEmoji('💯')">💯</span>
+        </div>
+
+    </div>
+
+    <button class="send-btn" onclick="sendPrivate()">📤 Gửi</button>
+</div>
+
+
+<button class="send-btn" onclick="sendPrivate()">📤 Gửi</button>
+
+</div>
+
         </div>
 
     </div>

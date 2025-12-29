@@ -874,3 +874,35 @@ function formatFileSize(bytes) {
     return Math.round(bytes / Math.pow(k, i) * 100) / 100 + " " + sizes[i];
 }
 
+// ================= PRIVATE EMOJI SUPPORT =================
+
+// Toggle emoji panel cho chat riêng
+function togglePrivateEmoji() {
+    const panel = document.getElementById("privateEmojiPanel");
+    if (!panel) return;
+
+    panel.style.display =
+        panel.style.display === "none" || !panel.style.display
+            ? "flex"
+            : "none";
+}
+
+// Chèn emoji vào input chat riêng
+function insertPrivateEmoji(emoji) {
+    const input = document.getElementById("privateMessage");
+    if (!input) return;
+
+    input.value += emoji;
+    input.focus();
+}
+
+// Đóng panel khi click ra ngoài
+document.addEventListener("click", (e) => {
+    const panel = document.getElementById("privateEmojiPanel");
+    const btn = document.querySelector(".emoji-btn.private");
+
+    if (!panel || !btn) return;
+
+    const inside = panel.contains(e.target) || btn.contains(e.target);
+    if (!inside) panel.style.display = "none";
+});
