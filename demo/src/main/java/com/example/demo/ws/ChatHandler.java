@@ -207,11 +207,11 @@ public class ChatHandler extends TextWebSocketHandler {
                 broadcastUserList(room);
             }
 
-            // XÓA PHÒNG + LỊCH SỬ NẾU RỖNG
-            if (rooms.get(room).isEmpty()) {
-                rooms.remove(room);
-                chatHistory.remove(room);
-            }
+            // // XÓA PHÒNG + LỊCH SỬ NẾU RỖNG (ĐÃ TẮT - GIỮ PHÒNG VÀ LỊCH SỬ)
+            // if (rooms.get(room).isEmpty()) {
+            //     rooms.remove(room);
+            //     chatHistory.remove(room);
+            // }
 
             broadcastRoomList();
         }

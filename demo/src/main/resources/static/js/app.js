@@ -150,6 +150,9 @@ function join() {
 
     currentRoom = room;
 
+    // Xóa lịch sử chat cũ trước khi join phòng mới
+    chatArea.innerHTML = "";
+
     ws.send(`JOIN|${room}|${currentUser}|${getInitials(currentUser)}`);
 
     joinSection.classList.add("hidden");
@@ -502,12 +505,14 @@ function addPrivateMessage(sender, message, isCurrentUser, timestamp) {
 }
 
 // ================= ROOM HANDLING =================
-// 🔥 CÁCH 2: KHÔNG XÓA chatArea → để HISTORY hiển thị
 function switchRoom(roomName) {
     if (roomName === currentRoom) return;
 
     currentRoom = roomName;
     currentRoomName.textContent = `🏠 ${roomName}`;
+
+    // Xóa lịch sử chat cũ trước khi chuyển phòng
+    chatArea.innerHTML = "";
 
     ws.send(`JOIN|${roomName}|${currentUser}|${getInitials(currentUser)}`);
 }
@@ -672,16 +677,21 @@ ws.onmessage = (event) => {
     const firstPipe = data.indexOf("|");
     const type = data.substring(0, firstPipe);
 
-    // HISTORY|MSG|user|text|time
+    // HISTORY|MSG|user|text|time or HISTORY|FILE|user|fileUrl|fileType|fileName|fileSize|time
     if (type === "HISTORY") {
         // Lấy phần sau "HISTORY|"
         const msgData = data.substring(firstPipe + 1);
-        const parts = msgData.split("|", 4);
-        // parts[0] = "MSG", parts[1] = user, parts[2] = text, parts[3] = time
-        const user = parts[1];
-        const text = parts[2];
-        const timestamp = parts[3];
-        addMessage(user, text, user === currentUser, timestamp);
+        const parts = msgData.split("|");
+        const msgType = parts[0];
+        if (msgType === "MSG") {
+            const user = parts[1];
+            const text = parts[2];
+            const timestamp = parts[3];
+            addMessage(user, text, user === currentUser, timestamp);
+        } else if (msgType === "FILE") {
+            // FILE|sender|fileUrl|fileType|fileName|fileSize|timestamp
+            addFileMessage(parts[1], parts[2], parts[3], parts[4], parts[5], parts[1] === currentUser, parts[6]);
+        }
         return;
     }
 

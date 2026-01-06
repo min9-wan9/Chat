@@ -377,16 +377,19 @@ button:active {
     font-weight: 600; 
     font-size: 13px; 
     opacity: 0.9; 
+    color: black;
 }
 
 .message-time { 
     font-size: 11px; 
     opacity: 0.7; 
+    color: black;
 }
 
 .message-text { 
     font-size: 15px; 
     line-height: 1.4; 
+    color: black;
 }
 
 .message-file { 
