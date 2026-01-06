@@ -26,7 +26,7 @@ import org.springframework.web.multipart.MultipartFile;
 public class FileUploadController {
 
     private static final String UPLOAD_DIR = "uploads/";
-    private static final long MAX_FILE_SIZE = 1000 * 1024 * 1024; // 1000MB
+    private static final long MAX_FILE_SIZE = 10L * 1024 * 1024 * 1024; // 1GB
 
     // Map để lưu tên file gốc theo filename đã lưu
     private final Map<String, String> originalFilenames = new ConcurrentHashMap<>();
@@ -46,9 +46,6 @@ public class FileUploadController {
                 return ResponseEntity.badRequest().body(Map.of("error", "File is empty"));
             }
 
-            if (file.getSize() > MAX_FILE_SIZE) {
-                return ResponseEntity.badRequest().body(Map.of("error", "File too large (max 1000MB)"));
-            }
 
             String originalFilename = file.getOriginalFilename();
             String extension = originalFilename.substring(originalFilename.lastIndexOf("."));

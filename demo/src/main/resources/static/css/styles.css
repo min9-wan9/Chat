@@ -6,7 +6,7 @@
 
 body { 
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-    background: linear-gradient(135deg, #c7c7c7 0%, #ba44c5 100%); 
+    background: linear-gradient(135deg, #c47474 0%, #ba44c5 100%); 
     min-height: 100vh; 
     display: flex; 
     align-items: center; 
@@ -38,7 +38,7 @@ body {
 
 .sidebar-header { 
     padding: 20px; 
-    background: linear-gradient(135deg, #c7c7c7 0%, #ba44c5 100%); 
+    background: linear-gradient(135deg, #c47474 0%, #ba44c5 100%); 
     color: white; 
 }
 
@@ -52,7 +52,7 @@ body {
     opacity: 0.9; 
 }
 
-.sidebar-content { 
+/* .sidebar-content { 
     flex: 1; 
     overflow-y: auto; 
     padding: 10px; 
@@ -63,9 +63,9 @@ body {
 }
 
 .sidebar-content::-webkit-scrollbar-thumb { 
-    background: #667eea; 
+    background: #b957bd; 
     border-radius: 3px; 
-}
+} */
 
 /* Room & User Items */
 .room-item, 
@@ -104,7 +104,7 @@ body {
 }
 
 .room-icon { 
-    background: linear-gradient(135deg, #c7c7c7 0%, #ba44c5 100%); 
+    background: linear-gradient(135deg, #c47474 0%, #ba44c5 100%); 
     color: white; 
 }
 
@@ -158,7 +158,7 @@ body {
 
 /* Header */
 .header { 
-    background: linear-gradient(135deg, #c7c7c7 0%, #ba44c5 100%); 
+    background: linear-gradient(135deg, #c47474 0%, #ba44c5 100%); 
     color: white; 
     padding: 20px 30px; 
     display: flex; 
@@ -268,7 +268,7 @@ input:focus {
 /* Buttons */
 button { 
     padding: 12px 24px; 
-    background: linear-gradient(135deg, #c7c7c7 0%, #ba44c5 100%); 
+    background: linear-gradient(135deg, #c47474 0%, #ba44c5 100%); 
     color: white; 
     border: none; 
     border-radius: 10px; 
@@ -348,8 +348,8 @@ button:active {
 }
 
 .message.user { 
-    background: linear-gradient(135deg, #c7c7c7 0%, #ba44c5 100%); 
-    color: black; 
+    background: linear-gradient(135deg, #c47474 0%, #ba44c5 100%); 
+    color: rgb(255, 255, 255); 
     align-self: flex-end; 
     box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3); 
 }
@@ -585,7 +585,7 @@ button:active {
 /* ===== AUTH PAGE FIX ===== */
 .auth-page {
     min-height: 100vh;
-    background: linear-gradient(135deg, #c7c7c7 0%, #ba44c5 100%); 
+    background: linear-gradient(135deg, #c47474 0%, #ba44c5 100%); 
     display: flex;
     align-items: center;
     justify-content: center;
