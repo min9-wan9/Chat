@@ -1,8 +1,11 @@
 package com.example.demo.config;
 
-import com.example.demo.ws.ChatHandler;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.socket.config.annotation.*;
+import org.springframework.web.socket.config.annotation.EnableWebSocket;
+import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
+import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
+
+import com.example.demo.ws.ChatHandler;
 
 @Configuration
 @EnableWebSocket
@@ -13,7 +16,6 @@ public class WebSocketConfig implements WebSocketConfigurer {
     public WebSocketConfig(ChatHandler chatHandler) {
         this.chatHandler = chatHandler;
     }
-
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         registry.addHandler(chatHandler, "/chat")
