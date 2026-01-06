@@ -285,11 +285,11 @@ async function handlePrivateFileSelect(event) {
     if (!file) return;
 
     // Validate file size (10MB)
-    if (file.size > 10 * 1024 * 1024) {
-        alert("❌ File quá lớn! Tối đa 10MB");
-        event.target.value = "";
-        return;
-    }
+    // if (file.size > 1000 * 1024 * 1024) {
+    //     alert("❌ File quá lớn! Tối đa 1000MB");
+    //     event.target.value = "";
+    //     return;
+    // }
 
     if (!privateTarget) {
         alert("❌ Vui lòng chọn người nhận");
@@ -749,9 +749,9 @@ async function handleFileSelect(event) {
     const file = event.target.files[0];
     if (!file) return;
 
-    // Validate file size (10MB)
+    // Validate file size (1000MB)
     if (file.size > 10 * 1024 * 1024) {
-        alert("❌ File quá lớn! Tối đa 10MB");
+        alert("❌ File quá lớn! Tối đa 1000MB");
         event.target.value = "";
         return;
     }

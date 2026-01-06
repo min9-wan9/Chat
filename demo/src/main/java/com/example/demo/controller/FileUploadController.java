@@ -8,6 +8,7 @@ import java.nio.file.StandardCopyOption;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -25,7 +26,10 @@ import org.springframework.web.multipart.MultipartFile;
 public class FileUploadController {
 
     private static final String UPLOAD_DIR = "uploads/";
-    private static final long MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+    private static final long MAX_FILE_SIZE = 1000 * 1024 * 1024; // 1000MB
+
+    // Map để lưu tên file gốc theo filename đã lưu
+    private final Map<String, String> originalFilenames = new ConcurrentHashMap<>();
 
     public FileUploadController() {
         try {
@@ -43,7 +47,7 @@ public class FileUploadController {
             }
 
             if (file.getSize() > MAX_FILE_SIZE) {
-                return ResponseEntity.badRequest().body(Map.of("error", "File too large (max 10MB)"));
+                return ResponseEntity.badRequest().body(Map.of("error", "File too large (max 1000MB)"));
             }
 
             String originalFilename = file.getOriginalFilename();
@@ -52,6 +56,9 @@ public class FileUploadController {
             
             Path filepath = Paths.get(UPLOAD_DIR, filename);
             Files.copy(file.getInputStream(), filepath, StandardCopyOption.REPLACE_EXISTING);
+
+            // Lưu tên file gốc
+            originalFilenames.put(filename, originalFilename);
 
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
@@ -79,8 +86,12 @@ public class FileUploadController {
             byte[] fileContent = Files.readAllBytes(filepath);
             String contentType = Files.probeContentType(filepath);
             
+            // Lấy tên file gốc từ map
+            String originalFilename = originalFilenames.getOrDefault(filename, filename);
+
             return ResponseEntity.ok()
                 .header("Content-Type", contentType != null ? contentType : "application/octet-stream")
+                .header("Content-Disposition", "attachment; filename=\"" + originalFilename + "\"")
                 .body(fileContent);
 
         } catch (IOException e) {

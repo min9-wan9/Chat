@@ -30,12 +30,13 @@ public class ChatHandler extends TextWebSocketHandler {
     // username -> session for private messaging
     private final Map<String, WebSocketSession> userSessions = new ConcurrentHashMap<>();
 
-    // 🔥 LƯU LỊCH SỬ CHAT IN-MEMORY (room -> messages)
+    // LƯU LỊCH SỬ CHAT IN-MEMORY (room -> messages)
     private final Map<String, List<String>> chatHistory = new ConcurrentHashMap<>();
     private static final int MAX_HISTORY = 50;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    //Xử lý văn bản nhận được từ client
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
         String[] parts = message.getPayload().split("\\|", 5);
@@ -70,7 +71,7 @@ public class ChatHandler extends TextWebSocketHandler {
             broadcastUserList(room);
             broadcastRoomList();
 
-            // 🔥 GỬI LỊCH SỬ CHAT CHO USER MỚI
+            // GỬI LỊCH SỬ CHAT CHO USER MỚI
             List<String> history = chatHistory.get(room);
             if (history != null) {
                 for (String oldMsg : history) {
@@ -88,15 +89,15 @@ public class ChatHandler extends TextWebSocketHandler {
             if (room != null) {
                 String msg = "MSG|" + user + "|" + text + "|" + System.currentTimeMillis();
 
-                // 🔥 LƯU LỊCH SỬ CHAT
+                // LƯU LỊCH SỬ CHAT
                 chatHistory.putIfAbsent(room, new ArrayList<>());
                 List<String> history = chatHistory.get(room);
                 history.add(msg);
 
                 // Giới hạn số tin nhắn
-                if (history.size() > MAX_HISTORY) {
-                    history.remove(0);
-                }
+                // if (history.size() > MAX_HISTORY) {
+                //     history.remove(0);
+                // }
 
                 broadcast(room, msg);
             }
@@ -167,9 +168,9 @@ public class ChatHandler extends TextWebSocketHandler {
                 history.add(fileMsg);
 
                 // Limit history size
-                if (history.size() > MAX_HISTORY) {
-                    history.remove(0);
-                }
+                // if (history.size() > MAX_HISTORY) {
+                //     history.remove(0);
+                // }
 
                 broadcast(room, fileMsg);
             }
@@ -206,7 +207,7 @@ public class ChatHandler extends TextWebSocketHandler {
                 broadcastUserList(room);
             }
 
-            // 🔥 XÓA PHÒNG + LỊCH SỬ NẾU RỖNG
+            // XÓA PHÒNG + LỊCH SỬ NẾU RỖNG
             if (rooms.get(room).isEmpty()) {
                 rooms.remove(room);
                 chatHistory.remove(room);
