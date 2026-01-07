@@ -148,12 +148,14 @@ function join() {
         return;
     }
 
+    const password = prompt("Nhập mật khẩu phòng (để trống nếu tạo mới hoặc phòng không có mật khẩu):");
+
     currentRoom = room;
 
     // Xóa lịch sử chat cũ trước khi join phòng mới
     chatArea.innerHTML = "";
 
-    ws.send(`JOIN|${room}|${currentUser}|${getInitials(currentUser)}`);
+    ws.send(`JOIN|${room}|${currentUser}|${getInitials(currentUser)}|${password || ""}`);
 
     joinSection.classList.add("hidden");
     chatArea.style.display = "flex";
@@ -179,6 +181,17 @@ function send() {
 function logout() {
     localStorage.removeItem("currentUser");
     window.location.href = "login.html";
+}
+
+function deleteRoom() {
+    if (!currentRoom) {
+        alert("Bạn chưa tham gia phòng nào!");
+        return;
+    }
+
+    if (confirm(`Bạn có chắc muốn xóa phòng "${currentRoom}"? Tất cả người dùng sẽ bị kick ra khỏi phòng.`)) {
+        ws.send(`DELETE_ROOM|${currentRoom}`);
+    }
 }
 
 
@@ -505,7 +518,7 @@ function addPrivateMessage(sender, message, isCurrentUser, timestamp) {
 }
 
 // ================= ROOM HANDLING =================
-function switchRoom(roomName) {
+function switchRoom(roomName, password = "") {
     if (roomName === currentRoom) return;
 
     currentRoom = roomName;
@@ -514,13 +527,14 @@ function switchRoom(roomName) {
     // Xóa lịch sử chat cũ trước khi chuyển phòng
     chatArea.innerHTML = "";
 
-    ws.send(`JOIN|${roomName}|${currentUser}|${getInitials(currentUser)}`);
+    ws.send(`JOIN|${roomName}|${currentUser}|${getInitials(currentUser)}|${password}`);
 }
 
 function createNewRoom() {
     const roomName = prompt("Nhập tên phòng mới:");
     if (roomName && roomName.trim()) {
-        switchRoom(roomName.trim());
+        const password = prompt("Nhập mật khẩu cho phòng (để trống nếu không cần):");
+        switchRoom(roomName.trim(), password || "");
     }
 }
 
@@ -615,11 +629,20 @@ function updateRoomList(rooms) {
         if (room.name === currentRoom) {
             roomDiv.classList.add("active");
         }
-        roomDiv.onclick = () => switchRoom(room.name);
+        roomDiv.onclick = () => {
+            if (room.hasPassword) {
+                const password = prompt(`Nhập mật khẩu cho phòng ${room.name}:`);
+                if (password !== null) {
+                    switchRoom(room.name, password);
+                }
+            } else {
+                switchRoom(room.name);
+            }
+        };
 
         const icon = document.createElement("div");
         icon.className = "room-icon";
-        icon.textContent = room.name.substring(0, 2).toUpperCase();
+        icon.textContent = room.hasPassword ? "🔒" : room.name.substring(0, 2).toUpperCase();
 
         const info = document.createElement("div");
         info.className = "room-info";
@@ -701,6 +724,14 @@ ws.onmessage = (event) => {
     else if (type === "MSG") addMessage(parts[1], parts[2], parts[1] === currentUser, parts[3]);
     else if (type === "USERS") updateUserList(JSON.parse(parts[1]));
     else if (type === "ROOMS") updateRoomList(JSON.parse(parts[1]));
+    else if (type === "ERROR") {
+        alert(parts[1]);
+        // Reset to join section if error
+        joinSection.classList.remove("hidden");
+        chatArea.style.display = "none";
+        inputArea.style.display = "none";
+        userSidebar.style.display = "none";
+    }
     else if (type === "PRIVATE") addPrivateMessage(parts[1], parts[2], false, parts[3]);
     else if (type === "PRIVATE_SENT") addPrivateMessage(parts[1], parts[2], true, parts[3]);
     else if (type === "TYPING") showTyping(parts[1]);
@@ -715,6 +746,19 @@ ws.onmessage = (event) => {
     else if (type === "PRIVATE_FILE_SENT") {
         // PRIVATE_FILE_SENT|targetUser|fileUrl|fileType|fileName|fileSize|timestamp
         addPrivateFileMessage(parts[1], parts[2], parts[3], parts[4], parts[5], true, parts[6]);
+    }
+    else if (type === "ROOM_DELETED") {
+        const deletedRoom = parts[1];
+        if (currentRoom === deletedRoom) {
+            alert(`Phòng "${deletedRoom}" đã bị xóa. Bạn sẽ được chuyển về màn hình tham gia.`);
+            // Reset UI
+            joinSection.classList.remove("hidden");
+            chatArea.style.display = "none";
+            inputArea.style.display = "none";
+            userSidebar.style.display = "none";
+            currentRoom = "";
+            currentRoomName.textContent = "💬 Chat App";
+        }
     }
 };
 

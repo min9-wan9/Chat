@@ -27,6 +27,9 @@ public class ChatHandler extends TextWebSocketHandler {
     private final Map<String, String> sessionIp = new ConcurrentHashMap<>();
     private final Map<String, String> sessionUniqueId = new ConcurrentHashMap<>();
 
+    // room passwords
+    private final Map<String, String> roomPasswords = new ConcurrentHashMap<>();
+
     // username -> session for private messaging
     private final Map<String, WebSocketSession> userSessions = new ConcurrentHashMap<>();
 
@@ -47,8 +50,24 @@ public class ChatHandler extends TextWebSocketHandler {
             String room = parts[1];
             String user = parts[2];
             String avatar = parts.length > 3 ? parts[3] : getInitials(user);
+            String password = parts.length > 4 ? parts[4] : "";
 
-            leave(session);
+            // Check if user already in a room
+            if (sessionRoom.containsKey(session.getId())) {
+                leave(session);
+            }
+
+            // Check password
+            if (rooms.containsKey(room)) {
+                String existingPassword = roomPasswords.get(room);
+                if (existingPassword != null && !existingPassword.equals(password)) {
+                    session.sendMessage(new TextMessage("ERROR|Sai mật khẩu cho phòng " + room));
+                    return;
+                }
+            } else {
+                // Create new room with password
+                roomPasswords.put(room, password);
+            }
 
             rooms.putIfAbsent(room, ConcurrentHashMap.newKeySet());
             rooms.get(room).add(session);
@@ -180,6 +199,49 @@ public class ChatHandler extends TextWebSocketHandler {
         if ("GET_ROOMS".equals(type)) {
             sendRoomList(session);
         }
+
+        // ================= DELETE ROOM =================
+        if ("DELETE_ROOM".equals(type)) {
+            String roomToDelete = parts[1];
+            String user = sessionUser.get(session.getId());
+
+            if (rooms.containsKey(roomToDelete)) {
+                // Thông báo cho tất cả người dùng trong phòng
+                broadcast(roomToDelete, "SYS|Phòng " + roomToDelete + " đã bị xóa bởi " + user);
+
+                // Lấy danh sách sessions trong phòng
+                Set<WebSocketSession> roomSessions = rooms.get(roomToDelete);
+                if (roomSessions != null) {
+                    for (WebSocketSession s : roomSessions) {
+                        if (s.isOpen()) {
+                            // Gửi lệnh rời phòng
+                            s.sendMessage(new TextMessage("ROOM_DELETED|" + roomToDelete));
+                            // Xóa session khỏi phòng
+                            sessionRoom.remove(s.getId());
+                            sessionUser.remove(s.getId());
+                            sessionAvatar.remove(s.getId());
+                            sessionIp.remove(s.getId());
+                            sessionUniqueId.remove(s.getId());
+                            // Xóa khỏi userSessions nếu cần
+                            String u = sessionUser.get(s.getId());
+                            if (u != null) {
+                                userSessions.remove(u);
+                            }
+                        }
+                    }
+                }
+
+                // Xóa phòng
+                rooms.remove(roomToDelete);
+                roomPasswords.remove(roomToDelete);
+                chatHistory.remove(roomToDelete);
+
+                // Broadcast danh sách phòng mới
+                broadcastRoomList();
+            } else {
+                session.sendMessage(new TextMessage("ERROR|Phòng " + roomToDelete + " không tồn tại"));
+            }
+        }
     }
 
     @Override
@@ -266,6 +328,8 @@ public class ChatHandler extends TextWebSocketHandler {
                     Map<String, Object> roomInfo = new HashMap<>();
                     roomInfo.put("name", entry.getKey());
                     roomInfo.put("count", entry.getValue().size());
+                    String pwd = roomPasswords.get(entry.getKey());
+                    roomInfo.put("hasPassword", pwd != null && !pwd.isEmpty());
                     return roomInfo;
                 })
                 .collect(Collectors.toList());
@@ -285,6 +349,8 @@ public class ChatHandler extends TextWebSocketHandler {
                     Map<String, Object> roomInfo = new HashMap<>();
                     roomInfo.put("name", entry.getKey());
                     roomInfo.put("count", entry.getValue().size());
+                    String pwd = roomPasswords.get(entry.getKey());
+                    roomInfo.put("hasPassword", pwd != null && !pwd.isEmpty());
                     return roomInfo;
                 })
                 .collect(Collectors.toList());
